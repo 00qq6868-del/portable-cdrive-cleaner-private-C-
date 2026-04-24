@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
 namespace PortableCDriveCleaner.Forms;
@@ -7,64 +8,100 @@ internal static class UiScaleHelper
     private sealed record ButtonSizingSpec(int MinimumWidth, int HorizontalPadding, int MinimumHeight, int VerticalPadding);
 
     private static readonly ConditionalWeakTable<Button, ButtonSizingSpec> ButtonSizingSpecs = [];
+    private static readonly ConcurrentDictionary<string, int> MeasurementCache = new(StringComparer.Ordinal);
 
     public static int MeasureTextWidth(string text, int minWidth = 0, int extraPadding = 0, Font? font = null)
     {
         var measureFont = font ?? SystemFonts.MessageBoxFont;
-        var measured = TextRenderer.MeasureText(
-            string.IsNullOrWhiteSpace(text) ? "示例" : text,
-            measureFont,
-            new Size(int.MaxValue, int.MaxValue),
-            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
-        return Math.Max(minWidth, measured.Width + extraPadding + 6);
+        var cacheKey = BuildCacheKey("text", string.IsNullOrWhiteSpace(text) ? "示例" : text, measureFont, minWidth, extraPadding, 0);
+        return MeasurementCache.GetOrAdd(cacheKey, _ =>
+        {
+            var measured = TextRenderer.MeasureText(
+                string.IsNullOrWhiteSpace(text) ? "示例" : text,
+                measureFont,
+                new Size(int.MaxValue, int.MaxValue),
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+            return Math.Max(minWidth, measured.Width + extraPadding + 6);
+        });
     }
 
     public static int MeasureButtonWidth(string text, int minWidth, int horizontalPadding, Font? font = null)
     {
         var measureFont = font ?? SystemFonts.MessageBoxFont;
-        var measured = TextRenderer.MeasureText(
-            text + "  ",
-            measureFont,
-            new Size(int.MaxValue, int.MaxValue),
-            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
-        return Math.Max(minWidth, measured.Width + horizontalPadding + 14);
+        var cacheKey = BuildCacheKey("button-width", text, measureFont, minWidth, horizontalPadding, 0);
+        return MeasurementCache.GetOrAdd(cacheKey, _ =>
+        {
+            var measured = TextRenderer.MeasureText(
+                text + "  ",
+                measureFont,
+                new Size(int.MaxValue, int.MaxValue),
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+            return Math.Max(minWidth, measured.Width + horizontalPadding + 14);
+        });
     }
 
     public static int MeasureButtonHeight(int minHeight, int verticalPadding, Font? font = null, string sampleText = "处理中")
     {
         var measureFont = font ?? SystemFonts.MessageBoxFont;
-        var measured = TextRenderer.MeasureText(
-            sampleText,
-            measureFont,
-            new Size(int.MaxValue, int.MaxValue),
-            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
-        return Math.Max(minHeight, measured.Height + verticalPadding + 4);
+        var cacheKey = BuildCacheKey("button-height", sampleText, measureFont, minHeight, verticalPadding, 0);
+        return MeasurementCache.GetOrAdd(cacheKey, _ =>
+        {
+            var measured = TextRenderer.MeasureText(
+                sampleText,
+                measureFont,
+                new Size(int.MaxValue, int.MaxValue),
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+            return Math.Max(minHeight, measured.Height + verticalPadding + 4);
+        });
     }
 
     public static int MeasureGridColumnWidth(string text, int minWidth, int extraPadding, Font? font = null)
     {
         var measureFont = font ?? SystemFonts.MessageBoxFont;
-        var measured = TextRenderer.MeasureText(text + " ", measureFont, Size.Empty, TextFormatFlags.NoPrefix);
-        return Math.Max(minWidth, measured.Width + extraPadding + 6);
+        var cacheKey = BuildCacheKey("grid-col", text, measureFont, minWidth, extraPadding, 0);
+        return MeasurementCache.GetOrAdd(cacheKey, _ =>
+        {
+            var measured = TextRenderer.MeasureText(text + " ", measureFont, Size.Empty, TextFormatFlags.NoPrefix);
+            return Math.Max(minWidth, measured.Width + extraPadding + 6);
+        });
     }
 
     public static int MeasureGridHeaderHeight(Font? font = null, int minHeight = 42, int verticalPadding = 18)
     {
         var headerFont = font ?? SystemFonts.MessageBoxFont;
-        var measured = TextRenderer.MeasureText("示例标题", headerFont, Size.Empty, TextFormatFlags.NoPrefix);
-        return Math.Max(minHeight, measured.Height + verticalPadding + 4);
+        var cacheKey = BuildCacheKey("grid-header", "示例标题", headerFont, minHeight, verticalPadding, 0);
+        return MeasurementCache.GetOrAdd(cacheKey, _ =>
+        {
+            var measured = TextRenderer.MeasureText("示例标题", headerFont, Size.Empty, TextFormatFlags.NoPrefix);
+            return Math.Max(minHeight, measured.Height + verticalPadding + 4);
+        });
     }
 
     public static int MeasureGridRowHeight(Font? font = null, int minHeight = 34, int verticalPadding = 16)
     {
         var rowFont = font ?? SystemFonts.MessageBoxFont;
-        var measured = TextRenderer.MeasureText("示例文本", rowFont, Size.Empty, TextFormatFlags.NoPrefix);
-        return Math.Max(minHeight, measured.Height + verticalPadding + 4);
+        var cacheKey = BuildCacheKey("grid-row", "示例文本", rowFont, minHeight, verticalPadding, 0);
+        return MeasurementCache.GetOrAdd(cacheKey, _ =>
+        {
+            var measured = TextRenderer.MeasureText("示例文本", rowFont, Size.Empty, TextFormatFlags.NoPrefix);
+            return Math.Max(minHeight, measured.Height + verticalPadding + 4);
+        });
     }
 
     public static int MeasureWrapWidth(int clientWidth, int horizontalPadding, int minWidth = 280)
     {
         return Math.Max(minWidth, clientWidth - horizontalPadding);
+    }
+
+    private static string BuildCacheKey(string prefix, string text, Font? font, int a, int b, int c)
+    {
+        var keyFont = font ?? SystemFonts.MessageBoxFont;
+        if (keyFont is null)
+        {
+            return string.Join("|", prefix, text, "DefaultFont", 9f, (int)FontStyle.Regular, a, b, c);
+        }
+
+        return string.Join("|", prefix, text, keyFont.Name ?? "DefaultFont", keyFont.Size, (int)keyFont.Style, a, b, c);
     }
 
     public static void ApplyButtonSizing(

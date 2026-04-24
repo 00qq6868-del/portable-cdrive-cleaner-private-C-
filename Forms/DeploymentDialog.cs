@@ -300,7 +300,7 @@ public sealed class DeploymentDialog : Form
 
     private static Button CreateButton(string text, bool primary)
     {
-        var button = new Button
+        var button = new ThemedButton
         {
             Margin = new Padding(10, 0, 0, 0),
             Padding = new Padding(16, 0, 16, 0),

@@ -16,9 +16,9 @@ public sealed class CDriveSuggestionDialog : Form
     private readonly Label _summaryLabel = new();
     private readonly Label _phaseStatusLabel = new();
     private readonly Label _teachingLabel = new();
-    private readonly Button _migrateButton = new();
-    private readonly Button _deleteButton = new();
-    private readonly Button _revealButton = new();
+    private readonly Button _migrateButton = new ThemedButton();
+    private readonly Button _deleteButton = new ThemedButton();
+    private readonly Button _revealButton = new ThemedButton();
     private readonly Dictionary<string, Image> _candidateIcons = new(StringComparer.OrdinalIgnoreCase);
     private bool _resizeDragInProgress;
     private bool _pendingIconColumnRefresh;
@@ -87,8 +87,10 @@ public sealed class CDriveSuggestionDialog : Form
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 4,
-            Padding = new Padding(18, 16, 18, 16)
+            Padding = new Padding(18, 16, 18, 16),
+            BackColor = UiThemePalette.WindowBackground
         };
+        UiThemePalette.EnableDoubleBuffering(root);
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -110,7 +112,7 @@ public sealed class CDriveSuggestionDialog : Form
             Dock = DockStyle.Top,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = Color.White,
+            BackColor = UiThemePalette.SurfaceRaised,
             Padding = new Padding(16, 14, 16, 14),
             Margin = Padding.Empty
         };
@@ -149,7 +151,7 @@ public sealed class CDriveSuggestionDialog : Form
         var gridCard = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.White,
+            BackColor = UiThemePalette.Surface,
             Padding = new Padding(0),
             Margin = new Padding(0, 12, 0, 0)
         };
@@ -202,8 +204,8 @@ public sealed class CDriveSuggestionDialog : Form
         _grid.RowHeadersVisible = false;
         _grid.ReadOnly = false;
         _grid.BorderStyle = BorderStyle.None;
-        _grid.BackgroundColor = Color.White;
-        _grid.GridColor = Color.FromArgb(226, 231, 236);
+        _grid.BackgroundColor = UiThemePalette.Surface;
+        _grid.GridColor = UiThemePalette.Border;
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.ScrollBars = ScrollBars.Both;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
@@ -211,13 +213,13 @@ public sealed class CDriveSuggestionDialog : Form
         _grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
         _grid.RowTemplate.Height = UiScaleHelper.MeasureGridRowHeight(_grid.Font, minHeight: 36, verticalPadding: 18);
         _grid.EnableHeadersVisualStyles = false;
-        _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(242, 245, 247);
-        _grid.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(40, 55, 68);
+        _grid.ColumnHeadersDefaultCellStyle.BackColor = UiThemePalette.SurfaceRaised;
+        _grid.ColumnHeadersDefaultCellStyle.ForeColor = UiThemePalette.TextPrimary;
         _grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _grid.DefaultCellStyle.BackColor = Color.White;
-        _grid.DefaultCellStyle.ForeColor = Color.FromArgb(43, 56, 66);
-        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(239, 246, 243);
-        _grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(36, 48, 58);
+        _grid.DefaultCellStyle.BackColor = UiThemePalette.Surface;
+        _grid.DefaultCellStyle.ForeColor = UiThemePalette.TextSecondary;
+        _grid.DefaultCellStyle.SelectionBackColor = UiThemePalette.Selection;
+        _grid.DefaultCellStyle.SelectionForeColor = UiThemePalette.SelectionText;
         _grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         _grid.EditMode = DataGridViewEditMode.EditProgrammatically;
         _grid.CellClick += (_, e) =>
@@ -722,7 +724,7 @@ public sealed class CDriveSuggestionDialog : Form
 
             _candidateIcons[key] = ApplicationIconCache.GetSmallIcon(ResolveCandidateIconSourcePath(candidate), ResolveCandidateInstallRoot(candidate));
             refreshed++;
-            if (refreshed == 1 || refreshed % 8 == 0)
+            if (refreshed % 24 == 0)
             {
                 InvalidateIconColumn();
             }
@@ -904,7 +906,7 @@ public sealed class CDriveSuggestionDialog : Form
 
     private static Button CreateFooterButton(string text)
     {
-        var button = new Button();
+        var button = new ThemedButton();
         button.Text = text;
         ConfigureFooterButton(button);
         return button;

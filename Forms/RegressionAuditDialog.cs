@@ -13,7 +13,7 @@ public sealed class RegressionAuditDialog : Form
     private readonly Label _openItemsLabel = new();
     private readonly Label _runtimeLabel = new();
     private readonly Label _detailTitleLabel = new();
-    private readonly Button _closeButton = new();
+    private readonly Button _closeButton = new ThemedButton();
     private readonly BindingList<RegressionAuditEntry> _rows;
 
     public RegressionAuditDialog(IReadOnlyCollection<RegressionAuditEntry> entries, string runtimeInfoText)

@@ -18,6 +18,7 @@ public sealed class MainForm : Form
     private const int UltraCompactLayoutHeightThreshold = 920;
     private const int TeachingSecondaryHideHeightThreshold = 900;
     private const int ResizeRefreshIntervalMilliseconds = 140;
+    private const int JobCenterPassiveRefreshIntervalMilliseconds = 1000;
 
     private const string DriveAllKey = CleanupFilterState.AllValue;
     private const string QuickFilterAll = "all";
@@ -62,9 +63,9 @@ public sealed class MainForm : Form
     private readonly Button _dismissBannerButton = new();
     private readonly Panel _viewModePanel = CreateSurfacePanel();
     private readonly FlowLayoutPanel _viewModeFlow = new();
-    private readonly Button _cleanupViewButton = new();
-    private readonly Button _overviewViewButton = new();
-    private readonly Button _infrequentViewButton = new();
+    private readonly Button _cleanupViewButton = new ThemedButton();
+    private readonly Button _overviewViewButton = new ThemedButton();
+    private readonly Button _infrequentViewButton = new ThemedButton();
     private readonly Label _headerTitleLabel = new();
     private readonly Label _headerModeLabel = new();
     private readonly Label _driveSummaryLabel = new();
@@ -89,16 +90,16 @@ public sealed class MainForm : Form
     private readonly Label _modeFilterLabel = new();
     private readonly Label _sortFilterLabel = new();
     private readonly FlowLayoutPanel _quickFiltersHost = new();
-    private readonly Button _scanButton = new();
-    private readonly Button _recommendedButton = new();
-    private readonly Button _cDriveAdviceButton = new();
-    private readonly Button _scheduleSettingsButton = new();
-    private readonly Button _migrateSelectedButton = new();
-    private readonly Button _deleteOverviewSelectedButton = new();
-    private readonly Button _cleanSelectedButton = new();
-    private readonly Button _safeCleanButton = new();
-    private readonly Button _whitelistButton = new();
-    private readonly Button _moreActionsButton = new();
+    private readonly Button _scanButton = new ThemedButton();
+    private readonly Button _recommendedButton = new ThemedButton();
+    private readonly Button _cDriveAdviceButton = new ThemedButton();
+    private readonly Button _scheduleSettingsButton = new ThemedButton();
+    private readonly Button _migrateSelectedButton = new ThemedButton();
+    private readonly Button _deleteOverviewSelectedButton = new ThemedButton();
+    private readonly Button _cleanSelectedButton = new ThemedButton();
+    private readonly Button _safeCleanButton = new ThemedButton();
+    private readonly Button _whitelistButton = new ThemedButton();
+    private readonly Button _moreActionsButton = new ThemedButton();
     private readonly Panel _driveTabsPanel = new();
     private readonly Label _teachingPrimaryLabel = new();
     private readonly Label _teachingSecondaryLabel = new();
@@ -213,7 +214,7 @@ public sealed class MainForm : Form
             _toolTip.SetToolTip(_runtimeInfoLabel, runtimeInfoToolTip);
         }
 
-        _jobCenterRefreshTimer.Interval = 140;
+        _jobCenterRefreshTimer.Interval = JobCenterPassiveRefreshIntervalMilliseconds;
         _jobCenterRefreshTimer.Tick += (_, _) => FlushPendingJobCenterState();
         _resizeRefreshTimer.Interval = ResizeRefreshIntervalMilliseconds;
         _resizeRefreshTimer.Tick += (_, _) => FlushDeferredResizeRefresh(forceLayout: _pendingResizeForceLayout);
@@ -294,6 +295,7 @@ public sealed class MainForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = new Size(MinimumWindowWidth, MinimumWindowHeight);
         UiThemePalette.ApplyFormChrome(this);
+        UiThemePalette.EnableDoubleBuffering(_rootLayout);
 
         _rootLayout.Dock = DockStyle.Fill;
         _rootLayout.Padding = new Padding(16, 14, 16, 12);
@@ -339,11 +341,13 @@ public sealed class MainForm : Form
         UiThemePalette.ApplySurface(_filtersPanel, raised: false);
         UiThemePalette.ApplySurface(_summaryPanel, raised: false);
         UiThemePalette.ApplySurface(_contentPanel);
+        UiThemePalette.ApplySurface(_resultBannerPanel);
+        UiThemePalette.ApplySurface(_jobCenterPanel);
 
         _scanWarningPanel.BackColor = UiThemePalette.WarningSurface;
-        _resultBannerPanel.BackColor = UiThemePalette.SurfaceRaised;
-        _jobCenterPanel.BackColor = UiThemePalette.SurfaceRaised;
         _teachingPanel.BackColor = UiThemePalette.AccentSurface;
+        UiThemePalette.AttachBorderPainter(_scanWarningPanel, UiThemePalette.Warning);
+        UiThemePalette.AttachBorderPainter(_teachingPanel, UiThemePalette.Accent);
 
         _headerTitleLabel.ForeColor = UiThemePalette.TextPrimary;
         _headerModeLabel.ForeColor = UiThemePalette.TextSecondary;
@@ -576,6 +580,7 @@ public sealed class MainForm : Form
         _jobListFlow.FlowDirection = FlowDirection.TopDown;
         _jobListFlow.WrapContents = false;
         _jobListFlow.Margin = Padding.Empty;
+        UiThemePalette.EnableDoubleBuffering(_jobListFlow);
         layout.Controls.Add(_jobListFlow, 0, 2);
 
         _jobCenterPanel.Resize += (_, _) => HandleJobCardWidthRefreshRequest();
@@ -1909,7 +1914,7 @@ public sealed class MainForm : Form
 
             entry.IconImage = ApplicationIconCache.GetSmallIcon(entry.IconSourcePath, entry.InstallRoot);
             refreshed++;
-            if (refreshed == 1 || refreshed % 8 == 0)
+            if (refreshed % 24 == 0)
             {
                 InvalidateInfrequentIconColumn();
             }
@@ -1938,7 +1943,7 @@ public sealed class MainForm : Form
                 ResolveCleanupIconSourcePath(row),
                 ResolveCleanupIconInstallRoot(row));
             refreshed++;
-            if (refreshed == 1 || refreshed % 8 == 0)
+            if (refreshed % 24 == 0)
             {
                 InvalidateCleanupIconColumn();
             }
@@ -1967,7 +1972,7 @@ public sealed class MainForm : Form
                 ResolveOverviewIconSourcePath(entry),
                 ResolveOverviewIconInstallRoot(entry));
             refreshed++;
-            if (refreshed == 1 || refreshed % 8 == 0)
+            if (refreshed % 24 == 0)
             {
                 InvalidateOverviewIconColumn();
             }
@@ -4263,7 +4268,9 @@ public sealed class MainForm : Form
             _hasPendingJobCenterState = true;
         }
 
-        if (!_jobCenterRefreshTimer.Enabled)
+        FlushPendingJobCenterState();
+
+        if ((state.RunningCount + state.QueuedCount) > 0 && !_jobCenterRefreshTimer.Enabled)
         {
             _jobCenterRefreshTimer.Start();
         }
@@ -4407,6 +4414,7 @@ public sealed class MainForm : Form
             Padding = new Padding(10, 10, 10, 10),
             BackColor = UiThemePalette.SurfaceRaised
         };
+        UiThemePalette.EnableDoubleBuffering(panel);
         UiThemePalette.AttachBorderPainter(panel);
 
         var layout = new TableLayoutPanel
@@ -4418,6 +4426,7 @@ public sealed class MainForm : Form
             RowCount = 3,
             Margin = Padding.Empty
         };
+        UiThemePalette.EnableDoubleBuffering(layout);
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -4453,14 +4462,14 @@ public sealed class MainForm : Form
         layout.Controls.Add(messageLabel, 0, 1);
         layout.SetColumnSpan(messageLabel, 2);
 
-        var progressBar = new ProgressBar
+        var progressBar = new ThemedProgressBar
         {
             Dock = DockStyle.Top,
             Height = 10,
-            Margin = new Padding(0, 8, 0, 0),
-            Style = ProgressBarStyle.Continuous
+            Margin = new Padding(0, 8, 0, 0)
         };
         progressBar.Value = GetJobProgressBarValue(job);
+        progressBar.IsIndeterminate = job.IsIndeterminate && job.Percent <= 0 && job.State == OperationJobState.Running;
 
         layout.Controls.Add(progressBar, 0, 2);
         layout.SetColumnSpan(progressBar, 2);
@@ -4468,6 +4477,7 @@ public sealed class MainForm : Form
         {
             Job = job
         };
+        ApplyJobCardLayout(binding);
         UpdateJobCard(binding, job);
         return binding;
     }
@@ -4475,18 +4485,36 @@ public sealed class MainForm : Form
     private void UpdateJobCard(JobCardBinding binding, OperationJob job)
     {
         binding.Job = job;
-        binding.TitleLabel.Text = $"{job.Title} · {GetJobStateText(job)}";
-        binding.ProgressSummaryLabel.ForeColor = GetJobProgressColor(job);
-        binding.ProgressSummaryLabel.Text = BuildJobProgressText(job);
-        binding.MessageLabel.Text = BuildJobMessage(job);
-        binding.ProgressBar.Style = ProgressBarStyle.Continuous;
+        var titleText = $"{job.Title} · {GetJobStateText(job)}";
+        if (!string.Equals(binding.TitleLabel.Text, titleText, StringComparison.Ordinal))
+        {
+            binding.TitleLabel.Text = titleText;
+        }
+
+        var progressColor = GetJobProgressColor(job);
+        if (binding.ProgressSummaryLabel.ForeColor != progressColor)
+        {
+            binding.ProgressSummaryLabel.ForeColor = progressColor;
+        }
+
+        var progressText = BuildJobProgressText(job);
+        if (!string.Equals(binding.ProgressSummaryLabel.Text, progressText, StringComparison.Ordinal))
+        {
+            binding.ProgressSummaryLabel.Text = progressText;
+        }
+
+        var messageText = BuildJobMessage(job);
+        if (!string.Equals(binding.MessageLabel.Text, messageText, StringComparison.Ordinal))
+        {
+            binding.MessageLabel.Text = messageText;
+        }
+
         var displayPercent = GetJobProgressBarValue(job);
         if (binding.ProgressBar.Value != displayPercent)
         {
             binding.ProgressBar.Value = displayPercent;
         }
-
-        ApplyJobCardLayout(binding);
+        binding.ProgressBar.IsIndeterminate = job.IsIndeterminate && job.Percent <= 0 && job.State == OperationJobState.Running;
         ApplyJobCardToolTips(binding, job);
     }
 
@@ -4516,6 +4544,14 @@ public sealed class MainForm : Form
 
     private void ApplyJobCardLayout(JobCardBinding binding)
     {
+        var cardWidth = GetJobCardWidth();
+        if (binding.LastAppliedWidth == cardWidth
+            && binding.LastCompactLayout == IsCompactLayout
+            && binding.LastUltraCompactLayout == IsUltraCompactLayout)
+        {
+            return;
+        }
+
         ApplyControlFont(binding.TitleLabel, IsCompactLayout ? 8.5f : 8.8f, FontStyle.Bold);
         ApplyControlFont(binding.ProgressSummaryLabel, IsCompactLayout ? 8.0f : 8.2f, FontStyle.Bold);
         ApplyControlFont(binding.MessageLabel, IsCompactLayout ? 8.35f : 8.75f);
@@ -4523,7 +4559,6 @@ public sealed class MainForm : Form
         binding.ProgressBar.Height = IsCompactLayout ? 8 : 10;
         binding.ProgressBar.Margin = IsCompactLayout ? new Padding(0, 6, 0, 0) : new Padding(0, 8, 0, 0);
 
-        var cardWidth = GetJobCardWidth();
         binding.Panel.Width = cardWidth;
 
         var contentWidth = Math.Max(340, cardWidth - binding.Panel.Padding.Horizontal - 2);
@@ -4537,6 +4572,9 @@ public sealed class MainForm : Form
 
         var titleWidth = Math.Max(180, contentWidth - summaryWidth - 18);
         binding.TitleLabel.MaximumSize = new Size(titleWidth, 0);
+        binding.LastAppliedWidth = cardWidth;
+        binding.LastCompactLayout = IsCompactLayout;
+        binding.LastUltraCompactLayout = IsUltraCompactLayout;
     }
 
     private void ApplyJobCardToolTips(JobCardBinding binding, OperationJob job)
@@ -4629,22 +4667,22 @@ public sealed class MainForm : Form
         try
         {
             _rootLayout.Padding = ultraCompact
-                ? new Padding(10, 8, 10, 8)
+                ? new Padding(8, 6, 8, 6)
                 : compact
                     ? new Padding(12, 10, 12, 10)
                     : new Padding(16, 14, 16, 12);
-            ApplySurfaceSpacing(_headerPanel, ultraCompact ? new Padding(12, 8, 12, 8) : compact ? new Padding(14, 10, 14, 10) : new Padding(18, 14, 18, 14), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_scanWarningPanel, ultraCompact ? new Padding(10, 6, 10, 6) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_resultBannerPanel, ultraCompact ? new Padding(10, 6, 10, 6) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_jobCenterPanel, ultraCompact ? new Padding(10, 6, 10, 6) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_viewModePanel, ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_toolbarPanel, ultraCompact ? new Padding(8, 6, 8, 6) : compact ? new Padding(10, 8, 10, 8) : new Padding(12, 10, 12, 10), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_driveTabsPanel, ultraCompact ? new Padding(8, 6, 8, 4) : compact ? new Padding(10, 8, 10, 6) : new Padding(12, 10, 12, 8), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_filtersPanel, ultraCompact ? new Padding(10, 6, 10, 6) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 12, 14, 12), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_summaryPanel, ultraCompact ? new Padding(10, 6, 10, 6) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_headerPanel, ultraCompact ? new Padding(10, 6, 10, 6) : compact ? new Padding(14, 10, 14, 10) : new Padding(18, 14, 18, 14), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_scanWarningPanel, ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_resultBannerPanel, ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_jobCenterPanel, ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_viewModePanel, ultraCompact ? new Padding(6, 4, 6, 4) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_toolbarPanel, ultraCompact ? new Padding(6, 4, 6, 4) : compact ? new Padding(10, 8, 10, 8) : new Padding(12, 10, 12, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_driveTabsPanel, ultraCompact ? new Padding(6, 4, 6, 3) : compact ? new Padding(10, 8, 10, 6) : new Padding(12, 10, 12, 8), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_filtersPanel, ultraCompact ? new Padding(8, 4, 8, 4) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 12, 14, 12), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_summaryPanel, ultraCompact ? new Padding(8, 4, 8, 4) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
             _statusStrip.Margin = ultraCompact ? new Padding(0, 4, 0, 0) : compact ? new Padding(0, 6, 0, 0) : new Padding(0, 10, 0, 0);
-            _teachingPanel.Padding = ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8);
-            _teachingPanel.Margin = ultraCompact ? new Padding(0, 0, 0, 4) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 8);
+            _teachingPanel.Padding = ultraCompact ? new Padding(6, 4, 6, 4) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8);
+            _teachingPanel.Margin = ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 8);
             _teachingSecondaryLabel.Visible = !ultraCompact && (!compact || ClientSize.Height > TeachingSecondaryHideHeightThreshold);
 
             ApplyControlFont(_headerTitleLabel, ultraCompact ? 12.6f : compact ? 13.6f : 15f, FontStyle.Bold);
@@ -4674,6 +4712,10 @@ public sealed class MainForm : Form
 
     private void UpdateResponsiveLabelWidths()
     {
+        var headerPrimaryWidth = Math.Max(260, ClientSize.Width - (IsUltraCompactLayout ? 240 : IsCompactLayout ? 300 : 360));
+        _headerTitleLabel.MaximumSize = new Size(headerPrimaryWidth, 0);
+        _headerModeLabel.MaximumSize = new Size(Math.Max(180, Math.Min(360, ClientSize.Width / 3)), 0);
+        _driveSummaryLabel.MaximumSize = new Size(Math.Max(280, ClientSize.Width - (IsUltraCompactLayout ? 160 : IsCompactLayout ? 220 : 280)), 0);
         _runtimeInfoLabel.MaximumSize = new Size(UiScaleHelper.MeasureWrapWidth(ClientSize.Width, IsUltraCompactLayout ? 220 : IsCompactLayout ? 150 : 100, minWidth: IsUltraCompactLayout ? 260 : IsCompactLayout ? 380 : 520), 0);
         _scanWarningLabel.MaximumSize = new Size(UiScaleHelper.MeasureWrapWidth(ClientSize.Width, IsUltraCompactLayout ? 220 : IsCompactLayout ? 180 : 140, minWidth: IsUltraCompactLayout ? 320 : 360), 0);
         _selectionHintLabel.MaximumSize = new Size(UiScaleHelper.MeasureWrapWidth(ClientSize.Width, IsUltraCompactLayout ? 220 : IsCompactLayout ? 190 : 140, minWidth: IsUltraCompactLayout ? 320 : 360), 0);
@@ -4689,6 +4731,7 @@ public sealed class MainForm : Form
         var fullDriveSummary = _driveSummaryLabel.Tag as string ?? _driveSummaryLabel.Text;
         _driveSummaryLabel.Tag = fullDriveSummary;
         _toolTip.SetToolTip(_driveSummaryLabel, fullDriveSummary);
+        _driveSummaryLabel.Visible = !IsUltraCompactLayout && !string.IsNullOrWhiteSpace(fullDriveSummary);
         _driveSummaryLabel.Text = IsUltraCompactLayout
             ? BuildUltraCompactDriveSummaryText(fullDriveSummary)
             : IsCompactLayout
@@ -4702,8 +4745,13 @@ public sealed class MainForm : Form
         _runtimeInfoLabel.Text = _runtimeInfoLabel.Visible
             ? (IsCompactLayout ? BuildCompactRuntimeInfoText(fullRuntimeInfo) : fullRuntimeInfo)
             : string.Empty;
-        _toolTip.SetToolTip(_headerPanel, IsCompactLayout ? fullRuntimeInfo : string.Empty);
-        _toolTip.SetToolTip(_headerModeLabel, IsCompactLayout ? fullRuntimeInfo : string.Empty);
+        var compactHeaderToolTip = IsUltraCompactLayout
+            ? string.Join("\r\n", new[] { fullDriveSummary, fullRuntimeInfo }.Where(text => !string.IsNullOrWhiteSpace(text)))
+            : IsCompactLayout
+                ? fullRuntimeInfo
+                : string.Empty;
+        _toolTip.SetToolTip(_headerPanel, compactHeaderToolTip);
+        _toolTip.SetToolTip(_headerModeLabel, compactHeaderToolTip);
     }
 
     private static void ApplySurfaceSpacing(Panel panel, Padding padding, Padding margin)
@@ -5078,7 +5126,7 @@ public sealed class MainForm : Form
 
     private sealed class JobCardBinding
     {
-        public JobCardBinding(Panel panel, Label titleLabel, Label progressSummaryLabel, Label messageLabel, ProgressBar progressBar)
+        public JobCardBinding(Panel panel, Label titleLabel, Label progressSummaryLabel, Label messageLabel, ThemedProgressBar progressBar)
         {
             Panel = panel;
             TitleLabel = titleLabel;
@@ -5091,8 +5139,11 @@ public sealed class MainForm : Form
         public Label TitleLabel { get; }
         public Label ProgressSummaryLabel { get; }
         public Label MessageLabel { get; }
-        public ProgressBar ProgressBar { get; }
+        public ThemedProgressBar ProgressBar { get; }
         public OperationJob Job { get; set; } = new();
+        public int LastAppliedWidth { get; set; } = -1;
+        public bool LastCompactLayout { get; set; }
+        public bool LastUltraCompactLayout { get; set; }
     }
 
     private void OnUiThread(Action action)
@@ -5767,6 +5818,7 @@ public sealed class MainForm : Form
             BackColor = UiThemePalette.SurfaceRaised,
             Margin = Padding.Empty
         };
+        UiThemePalette.EnableDoubleBuffering(panel);
         UiThemePalette.AttachBorderPainter(panel);
         return panel;
     }
@@ -5932,9 +5984,9 @@ public sealed class MainForm : Form
             button,
             text,
             minimumWidth,
-            ultraDense ? 42 : dense ? 48 : 58,
-            minHeight: ultraDense ? 34 : dense ? 38 : 42,
-            verticalPadding: ultraDense ? 10 : dense ? 14 : 18);
+            ultraDense ? 38 : dense ? 44 : 56,
+            minHeight: ultraDense ? 32 : dense ? 36 : 42,
+            verticalPadding: ultraDense ? 8 : dense ? 12 : 18);
     }
 
     private static void ConfigureFilterLabel(Label label, string text)
@@ -5979,7 +6031,7 @@ public sealed class MainForm : Form
 
     private static Button CreatePillButton(string text, bool compact = false)
     {
-        var button = new Button
+        var button = new ThemedButton
         {
             AutoSize = false,
             Margin = new Padding(0, 0, 8, 0),
@@ -5996,17 +6048,17 @@ public sealed class MainForm : Form
     private static void RefreshPillButtonSizing(Button button, bool compact, bool dense = false, bool ultraDense = false)
     {
         var minimumWidth = compact
-            ? (ultraDense ? 72 : dense ? 78 : 84)
-            : (ultraDense ? 82 : dense ? 88 : 96);
+            ? (ultraDense ? 68 : dense ? 76 : 84)
+            : (ultraDense ? 78 : dense ? 86 : 96);
         var horizontalPadding = compact
-            ? (ultraDense ? 18 : dense ? 22 : 28)
-            : (ultraDense ? 24 : dense ? 30 : 36);
+            ? (ultraDense ? 14 : dense ? 20 : 28)
+            : (ultraDense ? 20 : dense ? 28 : 36);
         var minimumHeight = compact
-            ? (ultraDense ? 28 : dense ? 30 : 34)
-            : (ultraDense ? 30 : dense ? 32 : 36);
+            ? (ultraDense ? 26 : dense ? 30 : 34)
+            : (ultraDense ? 28 : dense ? 32 : 36);
         var verticalPadding = compact
-            ? (ultraDense ? 8 : dense ? 10 : 14)
-            : (ultraDense ? 10 : dense ? 12 : 16);
+            ? (ultraDense ? 6 : dense ? 10 : 14)
+            : (ultraDense ? 8 : dense ? 12 : 16);
         UiScaleHelper.ApplyButtonSizing(button, button.Text, minimumWidth, horizontalPadding, minimumHeight, verticalPadding);
     }
 

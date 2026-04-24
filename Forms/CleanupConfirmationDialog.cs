@@ -358,7 +358,7 @@ public sealed class CleanupConfirmationDialog : Form
 
     private static Button CreateFooterButton(string text, bool primary)
     {
-        var button = new Button
+        var button = new ThemedButton
         {
             Text = text,
             Margin = new Padding(10, 0, 0, 0),

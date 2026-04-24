@@ -118,7 +118,7 @@ public sealed class ElevationPromptDialog : Form
 
     private static Button CreateFooterButton(string text, bool primary)
     {
-        var button = new Button
+        var button = new ThemedButton
         {
             Margin = new Padding(10, 0, 0, 0),
             Padding = new Padding(16, 0, 16, 0),

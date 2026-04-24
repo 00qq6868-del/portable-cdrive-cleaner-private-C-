@@ -8,7 +8,7 @@ public sealed class OperationProgressDialog : Form
     private readonly Label _headingLabel = new();
     private readonly Label _messageLabel = new();
     private readonly Label _detailLabel = new();
-    private readonly ProgressBar _progressBar = new();
+    private readonly ThemedProgressBar _progressBar = new();
     private readonly DateTime _startedAtUtc = DateTime.UtcNow;
     private readonly System.Windows.Forms.Timer _detailRefreshTimer = new();
     private int _currentPercent;
@@ -40,6 +40,7 @@ public sealed class OperationProgressDialog : Form
             Padding = new Padding(20, 18, 20, 18),
             BackColor = UiThemePalette.WindowBackground
         };
+        UiThemePalette.EnableDoubleBuffering(root);
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -69,7 +70,6 @@ public sealed class OperationProgressDialog : Form
 
         _progressBar.Dock = DockStyle.Top;
         _progressBar.Height = Math.Max(16, UiScaleHelper.MeasureButtonHeight(16, 2, _progressBar.Font, "处理中"));
-        _progressBar.Style = ProgressBarStyle.Continuous;
         _progressBar.Minimum = 0;
         _progressBar.Maximum = 100;
         root.Controls.Add(_progressBar, 0, 3);
@@ -102,12 +102,12 @@ public sealed class OperationProgressDialog : Form
             _messageLabel.Text = update.Message;
         }
 
-        _progressBar.Style = ProgressBarStyle.Continuous;
         var displayPercent = GetDisplayPercent();
         if (_progressBar.Value != displayPercent)
         {
             _progressBar.Value = displayPercent;
         }
+        _progressBar.IsIndeterminate = _currentIsIndeterminate && _currentPercent <= 0;
 
         UpdateDetailText();
     }

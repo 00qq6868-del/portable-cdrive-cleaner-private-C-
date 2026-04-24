@@ -295,7 +295,7 @@ public sealed class ScheduleSettingsDialog : Form
 
     private static Button CreateButton(string text, bool primary)
     {
-        var button = new Button
+        var button = new ThemedButton
         {
             AutoSize = false,
             Margin = new Padding(0, 0, 8, 0),

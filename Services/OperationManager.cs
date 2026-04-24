@@ -5,7 +5,7 @@ namespace PortableCDriveCleaner.Services;
 
 public sealed class OperationManager
 {
-    private static readonly TimeSpan ProgressPublishInterval = TimeSpan.FromMilliseconds(220);
+    private static readonly TimeSpan ProgressPublishInterval = TimeSpan.FromMilliseconds(400);
 
     private readonly SemaphoreSlim _concurrencyGate;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _resourceLocks = new(StringComparer.OrdinalIgnoreCase);
@@ -249,7 +249,6 @@ public sealed class OperationManager
         var majorChange = job.Percent != job.LastPublishedPercent
             || job.IsIndeterminate != job.LastPublishedIsIndeterminate
             || !string.Equals(job.Phase, job.LastPublishedPhase, StringComparison.Ordinal)
-            || !string.Equals(job.Message, job.LastPublishedMessage, StringComparison.Ordinal)
             || job.State != job.LastPublishedState;
 
         return majorChange || now - job.LastPublishedAtUtc >= ProgressPublishInterval;

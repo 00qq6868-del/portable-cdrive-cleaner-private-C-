@@ -1,24 +1,27 @@
 using System.Drawing.Drawing2D;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using PortableCDriveCleaner.Forms;
 
 namespace PortableCDriveCleaner.Infrastructure;
 
 public static class UiThemePalette
 {
-    public static Color WindowBackground => Color.FromArgb(7, 9, 11);
-    public static Color Surface => Color.FromArgb(14, 18, 22);
-    public static Color SurfaceRaised => Color.FromArgb(18, 23, 28);
-    public static Color SurfaceMuted => Color.FromArgb(11, 14, 17);
-    public static Color Border => Color.FromArgb(42, 50, 57);
-    public static Color BorderStrong => Color.FromArgb(60, 71, 79);
-    public static Color TextPrimary => Color.FromArgb(236, 241, 244);
-    public static Color TextSecondary => Color.FromArgb(183, 193, 200);
-    public static Color TextMuted => Color.FromArgb(129, 141, 149);
-    public static Color DisabledText => Color.FromArgb(92, 102, 109);
-    public static Color Accent => Color.FromArgb(48, 196, 115);
-    public static Color AccentStrong => Color.FromArgb(68, 216, 135);
-    public static Color AccentSurface => Color.FromArgb(17, 45, 31);
-    public static Color AccentSurfaceRaised => Color.FromArgb(21, 56, 38);
+    public static Color WindowBackground => Color.FromArgb(3, 5, 7);
+    public static Color Surface => Color.FromArgb(9, 12, 16);
+    public static Color SurfaceRaised => Color.FromArgb(14, 18, 22);
+    public static Color SurfaceMuted => Color.FromArgb(7, 10, 13);
+    public static Color Border => Color.FromArgb(34, 41, 48);
+    public static Color BorderStrong => Color.FromArgb(52, 61, 70);
+    public static Color TextPrimary => Color.FromArgb(240, 244, 247);
+    public static Color TextSecondary => Color.FromArgb(184, 193, 201);
+    public static Color TextMuted => Color.FromArgb(132, 143, 151);
+    public static Color DisabledText => Color.FromArgb(108, 118, 125);
+    public static Color Accent => Color.FromArgb(45, 201, 111);
+    public static Color AccentStrong => Color.FromArgb(75, 221, 139);
+    public static Color AccentSurface => Color.FromArgb(12, 34, 24);
+    public static Color AccentSurfaceRaised => Color.FromArgb(16, 42, 30);
     public static Color Selection => Color.FromArgb(23, 49, 35);
     public static Color SelectionText => TextPrimary;
     public static Color Warning => Color.FromArgb(238, 185, 73);
@@ -33,6 +36,7 @@ public static class UiThemePalette
     {
         form.BackColor = WindowBackground;
         form.ForeColor = TextPrimary;
+        EnableDoubleBuffering(form);
         if (form.ShowIcon)
         {
             try
@@ -43,12 +47,27 @@ public static class UiThemePalette
             {
             }
         }
+
+        ApplyImmersiveDarkMode(form);
     }
 
     public static void ApplySurface(Panel panel, bool raised = true)
     {
         panel.BackColor = raised ? SurfaceRaised : Surface;
+        EnableDoubleBuffering(panel);
         AttachBorderPainter(panel);
+    }
+
+    public static void EnableDoubleBuffering(Control control)
+    {
+        try
+        {
+            var property = typeof(Control).GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic);
+            property?.SetValue(control, true);
+        }
+        catch
+        {
+        }
     }
 
     public static void AttachBorderPainter(Control control, Color? borderColor = null)
@@ -58,6 +77,7 @@ public static class UiThemePalette
             return;
         }
 
+        EnableDoubleBuffering(control);
         control.Tag = control.Tag is null
             ? "theme-border"
             : $"{control.Tag};theme-border";
@@ -80,10 +100,19 @@ public static class UiThemePalette
 
     public static void ApplyButtonStyle(Button button, bool primary)
     {
+        if (button is ThemedButton themedButton)
+        {
+            themedButton.VisualStyle = primary ? ThemedButtonVisualStyle.Primary : ThemedButtonVisualStyle.Secondary;
+            themedButton.BackColor = primary ? Accent : Surface;
+            themedButton.ForeColor = primary ? TextPrimary : TextPrimary;
+            themedButton.FlatAppearance.BorderSize = 0;
+            return;
+        }
+
         button.FlatStyle = FlatStyle.Flat;
         button.UseVisualStyleBackColor = false;
         button.BackColor = primary ? Accent : Surface;
-        button.ForeColor = primary ? Color.White : TextPrimary;
+        button.ForeColor = primary ? TextPrimary : TextPrimary;
         button.FlatAppearance.BorderSize = 1;
         button.FlatAppearance.BorderColor = primary ? Accent : BorderStrong;
         button.FlatAppearance.MouseDownBackColor = primary ? AccentStrong : SurfaceRaised;
@@ -92,6 +121,15 @@ public static class UiThemePalette
 
     public static void ApplyPillButtonStyle(Button button, bool selected)
     {
+        if (button is ThemedButton themedButton)
+        {
+            themedButton.VisualStyle = selected ? ThemedButtonVisualStyle.PillSelected : ThemedButtonVisualStyle.Pill;
+            themedButton.BackColor = selected ? AccentSurfaceRaised : SurfaceMuted;
+            themedButton.ForeColor = selected ? AccentStrong : TextSecondary;
+            themedButton.FlatAppearance.BorderSize = 0;
+            return;
+        }
+
         button.FlatStyle = FlatStyle.Flat;
         button.UseVisualStyleBackColor = false;
         button.BackColor = selected ? AccentSurfaceRaised : SurfaceMuted;
@@ -250,6 +288,7 @@ public static class UiThemePalette
                 ApplyDataGridTheme(dataGridView);
                 break;
             case TableLayoutPanel tableLayoutPanel:
+                EnableDoubleBuffering(tableLayoutPanel);
                 if (ShouldNormalizeLayoutBackground(tableLayoutPanel.BackColor))
                 {
                     tableLayoutPanel.BackColor = tableLayoutPanel.Parent?.BackColor ?? WindowBackground;
@@ -257,6 +296,7 @@ public static class UiThemePalette
 
                 break;
             case FlowLayoutPanel flowLayoutPanel:
+                EnableDoubleBuffering(flowLayoutPanel);
                 if (ShouldNormalizeLayoutBackground(flowLayoutPanel.BackColor))
                 {
                     flowLayoutPanel.BackColor = flowLayoutPanel.Parent?.BackColor ?? WindowBackground;
@@ -264,6 +304,7 @@ public static class UiThemePalette
 
                 break;
             case Panel panel:
+                EnableDoubleBuffering(panel);
                 if (ShouldDarkenSurface(panel.BackColor))
                 {
                     panel.BackColor = Surface;
@@ -306,4 +347,50 @@ public static class UiThemePalette
     {
         return color.B >= color.R + 24 && color.B >= color.G + 12;
     }
+
+    private static void ApplyImmersiveDarkMode(Form form)
+    {
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 17763))
+        {
+            return;
+        }
+
+        if (form.IsHandleCreated)
+        {
+            TryEnableImmersiveDarkMode(form.Handle);
+        }
+        else
+        {
+            form.HandleCreated += (_, _) => TryEnableImmersiveDarkMode(form.Handle);
+        }
+    }
+
+    private static void TryEnableImmersiveDarkMode(IntPtr handle)
+    {
+        try
+        {
+            const int DwmwaUseImmersiveDarkMode = 20;
+            const int DwmwaUseImmersiveDarkModeLegacy = 19;
+            const int DwmwaBorderColor = 34;
+            const int DwmwaCaptionColor = 35;
+            const int DwmwaTextColor = 36;
+
+            var enabled = 1;
+            var captionColor = ColorTranslator.ToWin32(Surface);
+            var borderColor = ColorTranslator.ToWin32(Border);
+            var textColor = ColorTranslator.ToWin32(TextPrimary);
+
+            DwmSetWindowAttribute(handle, DwmwaUseImmersiveDarkMode, ref enabled, sizeof(int));
+            DwmSetWindowAttribute(handle, DwmwaUseImmersiveDarkModeLegacy, ref enabled, sizeof(int));
+            DwmSetWindowAttribute(handle, DwmwaCaptionColor, ref captionColor, sizeof(int));
+            DwmSetWindowAttribute(handle, DwmwaBorderColor, ref borderColor, sizeof(int));
+            DwmSetWindowAttribute(handle, DwmwaTextColor, ref textColor, sizeof(int));
+        }
+        catch
+        {
+        }
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int attributeValue, int attributeSize);
 }
