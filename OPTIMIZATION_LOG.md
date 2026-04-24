@@ -307,3 +307,25 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-24 23:09:37
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
+- 检查点模式：Progress
+- 已完成：
+  - 已写入最新硬性要求：所有数据实时保存到 GitHub 私有仓库、删除重复噪音但保留关键历史与未完成进度；下一步开始第二轮代码收口，重点替换原生进度条/按钮并压掉主窗任务区整块闪动。
+- 修改文件：
+- MEMORY.md
+- CURRENT_TASK.md
+- TODO_NOT_FIXED.md
+- SOURCE_CHANGE_LEDGER.md
+- AI_STATE.json
+- 剩余项：
+- 进度区整块闪动 / 跑马灯残留
+- 检查点文件：
+  - checkpoints/2026-04-24_230937_progress.md
+- 是否请求推送：否
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA

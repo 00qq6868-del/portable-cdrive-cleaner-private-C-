@@ -23,16 +23,19 @@
 ## 本轮准备修改
 
 ### 任务
-- 落地“去闪动、缩放不卡、纯黑科技感、高清官方兜底图标、秒开感与跨 AI 持续记忆”第一轮代码收口
+- 落地“去闪动、缩放不卡、纯黑科技感、高清官方兜底图标、秒开感与跨 AI 持续记忆”第二轮代码收口
 
 ### 目标
-- 去掉整块闪动和跑马灯，只保留百分比文字与静态绿色填充
+- 去掉整块闪动，只保留绿色填充增长、百分比变化和倒计时变化
+- 用自绘深色进度条和自绘深色按钮替换关键原生控件
 - 收口主窗口缩放期间的高频重排、图标列刷新和任务卡宽度抖动
-- 开始统一主窗与常驻工作窗口的纯黑主题
-- 把列表 fallback 图标换成官方主图标兜底
-- 把本轮状态持续写回 GitHub 持久记忆
+- 提升标题栏与主要界面的纯黑高级感，修复深色下按钮文字消失/发黑
+- 把列表 fallback 图标换成更清晰的 Windows 官方 stock icon / 关联图标兜底
+- 把本轮状态持续写回 GitHub 持久记忆，并去掉重复噪音记录但保留关键进度
 
 ### 计划涉及文件
+- `Forms/ThemedProgressBar.cs`
+- `Forms/ThemedButton.cs`
 - `Forms/OperationProgressDialog.cs`
 - `Forms/MainForm.cs`
 - `Forms/CDriveSuggestionDialog.cs`
@@ -43,18 +46,19 @@
 - `Forms/ElevationPromptDialog.cs`
 - `Services/OperationManager.cs`
 - `Infrastructure/ApplicationIconCache.cs`
+- `Infrastructure/UiThemePalette.cs`
 - `MEMORY.md`
 - `CURRENT_TASK.md`
 - `TODO_NOT_FIXED.md`
 - `AI_STATE.json`
 
 ### 预期动作
-- 移除 `Marquee`
-- 去掉整窗 `Refresh()`
-- 给后台任务状态发布加节流和内容去重
-- 把缩放过程改成轻量刷新，重布局延后
-- 给图标列重绘与缩放解耦
-- 增加统一暗黑主题与官方兜底图标
+- 新增静态自绘进度条控件
+- 新增自绘深色按钮控件，保证禁用态文字可读
+- 去掉后台任务卡每次状态变化都整卡重排的行为
+- 把缩放过程改成更轻的尺寸记录，稳定后再合并刷新
+- 给图标兜底改成更清晰的 Shell / 官方图标策略
+- 持续把开始/进行中/完成/中断状态写回 GitHub
 
 ## 已完成源码修改
 
