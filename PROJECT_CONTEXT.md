@@ -50,3 +50,6 @@
   - `TODO_NOT_FIXED.md`
   - 必要时更新 `MEMORY.md`
 - 任何时候如果怀疑会中断，先写交接，再继续做代码
+- 仓库内也保留了桌面入口脚本副本：
+  - `tools/desktop-launchers/连接GitHub私有仓库.cmd`
+  - `tools/desktop-launchers/保存当前进度到GitHub.cmd`
