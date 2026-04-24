@@ -37,6 +37,8 @@
 - 当前情况：
   - 文档骨架已建立
   - `tools/Save-Handoff.ps1` 已建立
+  - `tools/Connect-PrivateGitHub.ps1` 已建立
+  - 桌面入口已建立
   - 远程仓库与自动/手动推送流程未接通
 
 ## P2 - 后续增强

@@ -92,3 +92,22 @@
   - 项目已经具备“先写文档，再本地留痕，再接 GitHub 私有远程”的基础
 - 风险 / 备注：
   - 远程仓库还没连上，当前还不能自动实时推送到 GitHub
+
+## 2026-04-24
+- 模块：GitHub 连接入口
+- 任务：建立首次连接和后续保存的快捷入口
+- 已完成：
+  - 增加 `tools/Connect-PrivateGitHub.ps1`
+  - 在桌面增加 `连接GitHub私有仓库.cmd`
+  - 在桌面增加 `保存当前进度到GitHub.cmd`
+- 修改文件：
+  - `tools/Connect-PrivateGitHub.ps1`
+  - `CURRENT_TASK.md`
+  - `OPTIMIZATION_LOG.md`
+- 是否已发布到安装版：否
+- 安装版时间戳：
+  - 不适用
+- 结果：
+  - 现在第一次连接 GitHub 和后续保存进度都可以直接点桌面入口
+- 风险 / 备注：
+  - 首次连接仍然需要用户自己的 GitHub 私有仓库地址与账号授权
