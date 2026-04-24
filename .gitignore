@@ -1,0 +1,14 @@
+bin/
+obj/
+dist/
+publish/
+artifacts/
+tempbuild/
+tempbuild-r0/
+tempbuild-r1/
+tempbuild-r2/
+*.user
+*.suo
+*.cache
+*.log
+
