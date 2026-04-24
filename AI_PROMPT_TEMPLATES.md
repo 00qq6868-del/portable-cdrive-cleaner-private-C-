@@ -1,5 +1,62 @@
 # 可直接复制给新 AI 的模板
 
+## 万能接力模板（推荐直接复制这一段）
+
+```text
+这是一个已经接入 GitHub 私有仓库、并且要求“跨 AI / 跨窗口不中断继续”的项目。
+
+请严格按下面流程执行，不要跳步，不要假装已完成，也不要遗漏历史要求。
+
+第一步：先读取项目根目录这些文件
+1. PROJECT_CONTEXT.md
+2. MEMORY.md
+3. CURRENT_TASK.md
+4. TODO_NOT_FIXED.md
+5. OPTIMIZATION_LOG.md
+6. HANDOVER_FOR_OTHER_AI.md
+7. SOURCE_CHANGE_LEDGER.md
+8. INTERRUPTED_PROGRESS.md
+9. AI_PROMPT_TEMPLATES.md
+10. GITHUB_SYNC_CHECKLIST.md
+
+第二步：读取后先输出
+1. 当前阶段
+2. 已完成到哪一步
+3. 正在进行但被打断的任务是什么
+4. 已修改过哪些源码文件
+5. 还没进行的方案有哪些
+6. 你准备继续哪一个任务
+
+第三步：开始执行前必须先做
+- 把你准备继续的任务写回 CURRENT_TASK.md
+- 如果涉及源码修改方案，写回 SOURCE_CHANGE_LEDGER.md
+- 如果任务是接着上次做到一半的，先更新 INTERRUPTED_PROGRESS.md
+
+第四步：执行过程中的硬性要求
+- 每完成一个部分，就更新 OPTIMIZATION_LOG.md
+- 已完成、未完成、待验证、被打断，都必须记录
+- 如果改了源码，要在 SOURCE_CHANGE_LEDGER.md 记录：
+  - 改了什么
+  - 改了哪些文件
+  - 已完成到哪
+  - 还有哪些没做
+- 如果任务做到一半可能中断，必须先更新 INTERRUPTED_PROGRESS.md
+
+第五步：结束前必须做
+- 更新 CURRENT_TASK.md
+- 更新 OPTIMIZATION_LOG.md
+- 更新 TODO_NOT_FIXED.md
+- 更新 SOURCE_CHANGE_LEDGER.md
+- 更新 INTERRUPTED_PROGRESS.md
+- 如果项目已连接 GitHub 私有仓库，优先把这些内容推上去
+
+绝对不要做的事
+- 不要把“已尝试”说成“已修好”
+- 不要只改聊天回答不改项目文档
+- 不要忽略历史硬性要求
+- 不要丢掉正在进行但被打断的进度
+```
+
 ## 模板 1：新窗口 / 新 AI 接手模板
 
 ```text
@@ -12,6 +69,8 @@
 4. TODO_NOT_FIXED.md
 5. OPTIMIZATION_LOG.md
 6. HANDOVER_FOR_OTHER_AI.md
+7. SOURCE_CHANGE_LEDGER.md
+8. INTERRUPTED_PROGRESS.md
 
 读取后请先输出：
 1. 当前阶段
@@ -23,8 +82,10 @@
 - 不要遗漏历史要求
 - 不要把“已尝试”说成“已修好”
 - 开始执行前，先把你要做的内容写回 CURRENT_TASK.md
+- 涉及源码方案时，必须同步更新 SOURCE_CHANGE_LEDGER.md
 - 每完成一个部分，就更新 OPTIMIZATION_LOG.md
 - 如果还有没做完的，更新 TODO_NOT_FIXED.md
+- 如果任务做到一半被打断，必须更新 INTERRUPTED_PROGRESS.md
 - 如果中途可能被截断，优先先保存文档再继续
 ```
 
@@ -38,12 +99,16 @@
 2. TODO_NOT_FIXED.md
 3. OPTIMIZATION_LOG.md
 4. MEMORY.md
+5. SOURCE_CHANGE_LEDGER.md
+6. INTERRUPTED_PROGRESS.md
 
 然后只继续 CURRENT_TASK.md 里当前正在做的那一项，不要擅自切去别的问题。
 
 执行规则：
 - 先记录计划，再动手
 - 做完一个小阶段，就更新日志
+- 改源码时同步更新 SOURCE_CHANGE_LEDGER.md
+- 如果做到一半停下，更新 INTERRUPTED_PROGRESS.md
 - 改完源码后，如果项目有安装版同步链路，也要同步安装版
 - 最后明确写出：
   - 这次完成了什么
@@ -61,7 +126,9 @@
 2. 更新 OPTIMIZATION_LOG.md
 3. 更新 TODO_NOT_FIXED.md
 4. 如果有新的用户硬性要求，更新 MEMORY.md
-5. 在 HANDOVER_FOR_OTHER_AI.md 里写清楚：
+5. 更新 SOURCE_CHANGE_LEDGER.md
+6. 更新 INTERRUPTED_PROGRESS.md
+7. 在 HANDOVER_FOR_OTHER_AI.md 里写清楚：
    - 当前做到哪一步
    - 哪一步还没做完
    - 改了哪些文件
@@ -80,6 +147,8 @@
 2. CURRENT_TASK.md
 3. TODO_NOT_FIXED.md
 4. OPTIMIZATION_LOG.md
+5. SOURCE_CHANGE_LEDGER.md
+6. INTERRUPTED_PROGRESS.md
 
 然后帮我检查：
 1. 用户的硬性要求是否有遗漏
@@ -89,4 +158,3 @@
 
 请按“已完成 / 未完成 / 回归风险 / 下一步”四部分输出。
 ```
-

@@ -25,6 +25,8 @@
   4. `TODO_NOT_FIXED.md`
   5. `OPTIMIZATION_LOG.md`
   6. `HANDOVER_FOR_OTHER_AI.md`
+  7. `SOURCE_CHANGE_LEDGER.md`
+  8. `INTERRUPTED_PROGRESS.md`
 
 ## 当前阶段
 - 当前仍处于“历史问题收口 + 主窗口垂直布局压缩”阶段

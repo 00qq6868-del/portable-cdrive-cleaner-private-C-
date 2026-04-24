@@ -15,6 +15,8 @@ $requiredDocs = @(
     "OPTIMIZATION_LOG.md",
     "TODO_NOT_FIXED.md",
     "HANDOVER_FOR_OTHER_AI.md",
+    "SOURCE_CHANGE_LEDGER.md",
+    "INTERRUPTED_PROGRESS.md",
     "AI_PROMPT_TEMPLATES.md",
     "GITHUB_SYNC_CHECKLIST.md",
     "README.md"
@@ -65,4 +67,3 @@ try {
 finally {
     Pop-Location
 }
-

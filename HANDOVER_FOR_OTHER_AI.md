@@ -6,7 +6,9 @@
 3. `CURRENT_TASK.md`
 4. `TODO_NOT_FIXED.md`
 5. `OPTIMIZATION_LOG.md`
-6. `AI_PROMPT_TEMPLATES.md`
+6. `SOURCE_CHANGE_LEDGER.md`
+7. `INTERRUPTED_PROGRESS.md`
+8. `AI_PROMPT_TEMPLATES.md`
 
 ## 当前必须知道的事实
 - 这是 WinForms 项目，不是 Web 项目
@@ -31,6 +33,8 @@
 1. 更新 `OPTIMIZATION_LOG.md`
 2. 如果还有未结案内容，更新 `TODO_NOT_FIXED.md`
 3. 如果用户新加了硬性规则，更新 `MEMORY.md`
+4. 如果动了源码，更新 `SOURCE_CHANGE_LEDGER.md`
+5. 如果做到一半准备停下，更新 `INTERRUPTED_PROGRESS.md`
 
 ## 如果对话快被截断
 1. 先不要继续写代码
@@ -38,9 +42,10 @@
    - `CURRENT_TASK.md`
    - `OPTIMIZATION_LOG.md`
    - `TODO_NOT_FIXED.md`
+   - `SOURCE_CHANGE_LEDGER.md`
+   - `INTERRUPTED_PROGRESS.md`
 3. 如果 Git 已配置远程，就优先推送这些文档
 
 ## 当前最应该继续的方向
 - 继续处理主窗口小窗布局
 - 目标不是“有一点改善”，而是“数据区明显变大，用户一眼就看出来”
-
