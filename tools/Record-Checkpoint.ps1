@@ -168,6 +168,8 @@ $lastCompletedStep = switch ($Mode) {
 }
 
 $inProgressStep = switch ($Mode) {
+    "Start" { $summaryText }
+    "Progress" { Get-FirstOrDefault -Items $pendingItems -Fallback $currentTask }
     "Finish" { "" }
     default { $summaryText }
 }
@@ -337,6 +339,7 @@ if ($Push) {
 }
 
 & powershell @saveArgs
+
 
 
 

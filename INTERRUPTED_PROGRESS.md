@@ -5,13 +5,13 @@
 - 当前状态：进行中
 - 当前阶段：历史问题收口 + 主窗口小窗布局继续收口
 - 本次摘要：已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、标准 checkpoint 脚本和跨窗口模板；下一步返回 MainForm 小窗布局问题
-- 最近检查点：checkpoints/2026-04-24_213112_progress.md
+- 最近检查点：checkpoints/2026-04-24_213313_progress.md
 
 ## 已完成到哪一步
 - 已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、标准 checkpoint 脚本和跨窗口模板；下一步返回 MainForm 小窗布局问题
 
 ## 当前做到一半的内容
-- 已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、标准 checkpoint 脚本和跨窗口模板；下一步返回 MainForm 小窗布局问题
+- 主窗口小窗数据区仍然太少
 
 ## 当前还没完成的部分
 - 主窗口小窗数据区仍然太少

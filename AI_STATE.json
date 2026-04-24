@@ -6,7 +6,7 @@
     "current_task":  "主窗口小窗布局继续收口",
     "task_status":  "in_progress",
     "last_completed_step":  "已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、标准 checkpoint 脚本和跨窗口模板；下一步返回 MainForm 小窗布局问题",
-    "in_progress_step":  "已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、标准 checkpoint 脚本和跨窗口模板；下一步返回 MainForm 小窗布局问题",
+    "in_progress_step":  "主窗口小窗数据区仍然太少",
     "next_step":  "主窗口小窗数据区仍然太少",
     "pending_items":  [
                           "主窗口小窗数据区仍然太少",
@@ -28,9 +28,9 @@
                            "tools/Record-Checkpoint.ps1",
                            "tools/desktop-launchers/保存当前进度到GitHub.cmd"
                        ],
-    "last_checkpoint_time":  "2026-04-24 21:31:12",
-    "last_commit":  "d103a70",
+    "last_checkpoint_time":  "2026-04-24 21:33:13",
+    "last_commit":  "bc0e500",
     "push_status":  "push_requested",
     "branch":  "main",
-    "latest_checkpoint":  "checkpoints/2026-04-24_213112_progress.md"
+    "latest_checkpoint":  "checkpoints/2026-04-24_213313_progress.md"
 }
