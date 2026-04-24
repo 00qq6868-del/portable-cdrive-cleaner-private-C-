@@ -5,18 +5,32 @@
     "current_phase":  "历史问题收口 + 主窗口小窗布局继续收口",
     "current_task":  "主窗口小窗布局继续收口",
     "task_status":  "in_progress",
-    "last_completed_step":  "已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、checkpoints 和标准 checkpoint 脚本；下一步返回 MainForm 小窗布局问题",
-    "in_progress_step":  "已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、checkpoints 和标准 checkpoint 脚本；下一步返回 MainForm 小窗布局问题",
-    "next_step":  "\"主窗口小窗数据区仍然太少\",\"主窗口顶部区域仍然过高\",\"退出后进程残留问题仍未收口\"",
+    "last_completed_step":  "已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、标准 checkpoint 脚本和跨窗口模板；下一步返回 MainForm 小窗布局问题",
+    "in_progress_step":  "已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、标准 checkpoint 脚本和跨窗口模板；下一步返回 MainForm 小窗布局问题",
+    "next_step":  "主窗口小窗数据区仍然太少",
     "pending_items":  [
-                          "\"主窗口小窗数据区仍然太少\",\"主窗口顶部区域仍然过高\",\"退出后进程残留问题仍未收口\""
+                          "主窗口小窗数据区仍然太少",
+                          "主窗口顶部区域仍然过高",
+                          "退出后进程残留问题仍未收口"
                       ],
     "modified_files":  [
-                           "\"AI_STATE.json\",\"PROJECT_CONTEXT.md\",\"README.md\",\"MEMORY.md\",\"HANDOVER_FOR_OTHER_AI.md\",\"TODO_NOT_FIXED.md\",\"SOURCE_CHANGE_LEDGER.md\",\"AI_PROMPT_TEMPLATES.md\",\"GITHUB_SYNC_CHECKLIST.md\",\"tools/Save-Handoff.ps1\",\"tools/Record-Checkpoint.ps1\",\"tools/desktop-launchers/保存当前进度到GitHub.cmd\""
+                           "AI_STATE.json",
+                           "PROJECT_CONTEXT.md",
+                           "README.md",
+                           "MEMORY.md",
+                           "HANDOVER_FOR_OTHER_AI.md",
+                           "TODO_NOT_FIXED.md",
+                           "SOURCE_CHANGE_LEDGER.md",
+                           "AI_PROMPT_TEMPLATES.md",
+                           "GITHUB_SYNC_CHECKLIST.md",
+                           "tools/Save-Handoff.ps1",
+                           "tools/Connect-PrivateGitHub.ps1",
+                           "tools/Record-Checkpoint.ps1",
+                           "tools/desktop-launchers/保存当前进度到GitHub.cmd"
                        ],
-    "last_checkpoint_time":  "2026-04-24 21:29:38",
-    "last_commit":  "08c93d7",
+    "last_checkpoint_time":  "2026-04-24 21:31:12",
+    "last_commit":  "d103a70",
     "push_status":  "push_requested",
     "branch":  "main",
-    "latest_checkpoint":  "checkpoints/2026-04-24_212938_progress.md"
+    "latest_checkpoint":  "checkpoints/2026-04-24_213112_progress.md"
 }

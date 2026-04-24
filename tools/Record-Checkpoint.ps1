@@ -50,6 +50,32 @@ function Get-ArrayValue {
     return @($Value)
 }
 
+function Normalize-List {
+    param([string[]]$Items)
+
+    $result = New-Object System.Collections.Generic.List[string]
+
+    foreach ($item in $Items) {
+        if ($null -eq $item) {
+            continue
+        }
+
+        $text = ([string]$item).Trim()
+        if ([string]::IsNullOrWhiteSpace($text)) {
+            continue
+        }
+
+        foreach ($part in ($text -split "\s*,\s*")) {
+            $clean = $part.Trim().Trim('"')
+            if (-not [string]::IsNullOrWhiteSpace($clean)) {
+                $result.Add($clean)
+            }
+        }
+    }
+
+    return $result.ToArray()
+}
+
 function Get-BulletBlock {
     param(
         [string[]]$Items,
@@ -102,8 +128,8 @@ $repoUrl = Get-RepoValue -ProjectRoot $projectRoot -GitArgs @("remote", "get-url
 $branch = Get-RepoValue -ProjectRoot $projectRoot -GitArgs @("rev-parse", "--abbrev-ref", "HEAD") -Fallback "unknown"
 $lastCommit = Get-RepoValue -ProjectRoot $projectRoot -GitArgs @("rev-parse", "--short", "HEAD") -Fallback "no-commit"
 
-$existingPending = if ($existingState) { Get-ArrayValue -Value $existingState.pending_items } else { @() }
-$existingModified = if ($existingState) { Get-ArrayValue -Value $existingState.modified_files } else { @() }
+$existingPending = if ($existingState) { Normalize-List -Items (Get-ArrayValue -Value $existingState.pending_items) } else { @() }
+$existingModified = if ($existingState) { Normalize-List -Items (Get-ArrayValue -Value $existingState.modified_files) } else { @() }
 $existingPhase = if ($existingState -and $existingState.current_phase) { [string]$existingState.current_phase } else { "历史问题收口 + 主窗口小窗布局继续收口" }
 $existingTask = if ($existingState -and $existingState.current_task) { [string]$existingState.current_task } else { "主窗口小窗布局继续收口" }
 $existingLastCompleted = if ($existingState -and $existingState.last_completed_step) { [string]$existingState.last_completed_step } else { "无" }
@@ -118,8 +144,8 @@ $checkpointRelativePath = "checkpoints/$checkpointFileName"
 
 $currentTask = if ([string]::IsNullOrWhiteSpace($Task)) { $existingTask } else { $Task.Trim() }
 $summaryText = if ([string]::IsNullOrWhiteSpace($Summary)) { "未提供额外摘要" } else { $Summary.Trim() }
-$pendingItems = if ($Remaining.Count -gt 0) { $Remaining } else { $existingPending }
-$modifiedItems = if ($ModifiedFiles.Count -gt 0) { $ModifiedFiles } else { $existingModified }
+$pendingItems = if ($Remaining.Count -gt 0) { Normalize-List -Items $Remaining } else { $existingPending }
+$modifiedItems = if ($ModifiedFiles.Count -gt 0) { Normalize-List -Items $ModifiedFiles } else { $existingModified }
 
 $taskStatus = switch ($Mode) {
     "Start" { "in_progress" }
@@ -311,6 +337,7 @@ if ($Push) {
 }
 
 & powershell @saveArgs
+
 
 
 
