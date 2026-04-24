@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>PortableCDriveCleaner</AssemblyName>
+    <RootNamespace>PortableCDriveCleaner</RootNamespace>
+    <Platforms>x64;ARM64</Platforms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationDefaultFont>Microsoft YaHei UI, 9</ApplicationDefaultFont>
+    <ApplicationIcon>Assets\App.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
+  </PropertyGroup>
+
+</Project>
