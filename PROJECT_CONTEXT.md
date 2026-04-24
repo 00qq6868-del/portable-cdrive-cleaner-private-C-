@@ -1,57 +1,72 @@
 # 项目上下文
 
-## 项目是什么
+## 项目识别
 - 项目名称：便携式磁盘清理器 / PortableCDriveCleaner
 - 技术栈：WinForms + .NET Windows 桌面程序
-- 源码目录：`E:\vscode Claude\PortableCDriveCleaner`
+- GitHub 私有仓库：`https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`
+- 本地源码目录：`E:\vscode Claude\PortableCDriveCleaner`
+- 当前分支：`main`
 - 实际安装目录：`D:\磁盘清理器`
 - 实际运行主程序：`D:\磁盘清理器\磁盘清理器.exe`
 - 当前桌面入口：`C:\Users\zero\Desktop\磁盘清理器.lnk`
-- 当前桌面入口模式：通过计划任务 `磁盘清理器-高权限启动` 拉起
+- 当前高权限计划任务：`磁盘清理器-高权限启动`
 
 ## 当前交付链
-- 源码修改后，使用 `publish.ps1` 重新发布
-- 发布脚本会同步：
+- 源码修改后，使用 `publish.ps1` 重新发布安装版。
+- 发布脚本需要同步：
   - 安装目录 EXE
   - 桌面快捷方式
   - 安装目录内快捷方式
-- 当前已确认：安装目录和桌面入口需要始终同步，不能只更新桌面快捷方式
+- 当前已锁定：安装目录和桌面入口必须始终同步，不能只更新其中一个。
 
-## 当前主要工作方式
-- 任何新 AI 或同一 AI 的新窗口，先读这些文件：
-  1. `PROJECT_CONTEXT.md`
-  2. `MEMORY.md`
-  3. `CURRENT_TASK.md`
-  4. `TODO_NOT_FIXED.md`
-  5. `OPTIMIZATION_LOG.md`
-  6. `HANDOVER_FOR_OTHER_AI.md`
-  7. `SOURCE_CHANGE_LEDGER.md`
-  8. `INTERRUPTED_PROGRESS.md`
+## GitHub 持久记忆基线
+- 记忆的唯一可信源是：
+  - GitHub 私有仓库中的结构化文档
+  - `AI_STATE.json`
+  - `checkpoints/` 检查点快照
+  - Git 提交历史
+  - 实际源码差异
+- 不再把聊天窗口本身当作唯一记忆来源。
+- 原始聊天逐字稿不做跨 AI 硬依赖，结构化摘要才是标准记忆。
 
-## 当前阶段
-- 当前仍处于“历史问题收口 + 主窗口垂直布局压缩”阶段
-- 最近一次用户最新反馈：
-  - 主窗口小窗里仍然“看到的数据太少”
-  - 顶部仍然占高太多
-- 这意味着：
-  - 小窗布局问题尚未结案
-  - 当前阶段不能假装完成，必须继续记录与回归
+## 默认读取顺序
+- 新 AI / 新窗口开始前，默认顺序改为：
+  1. `AI_STATE.json`
+  2. `PROJECT_CONTEXT.md`
+  3. `MEMORY.md`
+  4. `CURRENT_TASK.md`
+  5. `TODO_NOT_FIXED.md`
+  6. `OPTIMIZATION_LOG.md`
+  7. `HANDOVER_FOR_OTHER_AI.md`
+  8. `SOURCE_CHANGE_LEDGER.md`
+  9. `INTERRUPTED_PROGRESS.md`
+  10. `AI_PROMPT_TEMPLATES.md`
+  11. `GITHUB_SYNC_CHECKLIST.md`
+
+## 默认同步规则
+- 每次开始新任务前，先执行 `git pull --rebase origin main`，再读取状态文件。
+- 默认四类检查点必须写回仓库：
+  - `Start`
+  - `Progress`
+  - `Finish`
+  - `Interrupt`
+- 标准入口：
+  - `tools/Record-Checkpoint.ps1`
+  - `tools/Save-Handoff.ps1`
+- 推送失败时，不能假装已同步，必须把失败状态写回 `AI_STATE.json` 和检查点快照。
+
+## 当前活动软件任务
+- GitHub 持久记忆与跨 AI 接力收口已完成，本轮下一步返回主窗口布局问题。
+- 当前尚未结案的真实软件问题：
+  - 主窗口小窗里数据区仍然太少
+  - 顶部区域仍然过高
+- 当前主要目标文件：
+  - `Forms/MainForm.cs`
 
 ## 当前重要事实
 - 当前安装版时间戳：`2026-04-23 02:47:53`
 - 当前安装版路径：`D:\磁盘清理器\磁盘清理器.exe`
-- 当前项目还没有 GitHub CLI
-- 当前项目已经初始化本地 Git 仓库
-- 当前 GitHub 私有远程已配置并已完成首次推送
-- 当前远程仓库：`origin -> portable-cdrive-cleaner-private-C-`
-
-## 使用规则
-- 每次开始新任务前，先更新 `CURRENT_TASK.md`
-- 每完成一个子步骤，立即更新：
-  - `OPTIMIZATION_LOG.md`
-  - `TODO_NOT_FIXED.md`
-  - 必要时更新 `MEMORY.md`
-- 任何时候如果怀疑会中断，先写交接，再继续做代码
-- 仓库内也保留了桌面入口脚本副本：
+- 当前项目没有 GitHub CLI，但 Git 远程已接通且可推送。
+- 仓库内保留了桌面脚本副本：
   - `tools/desktop-launchers/连接GitHub私有仓库.cmd`
   - `tools/desktop-launchers/保存当前进度到GitHub.cmd`

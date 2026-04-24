@@ -50,11 +50,34 @@ powershell -ExecutionPolicy Bypass -File .\publish.ps1
 
 如果要让不同 AI 窗口继续同一个项目，请优先阅读这些文件：
 
+- `AI_STATE.json`
 - `PROJECT_CONTEXT.md`
 - `MEMORY.md`
 - `CURRENT_TASK.md`
 - `TODO_NOT_FIXED.md`
 - `OPTIMIZATION_LOG.md`
 - `HANDOVER_FOR_OTHER_AI.md`
+- `SOURCE_CHANGE_LEDGER.md`
+- `INTERRUPTED_PROGRESS.md`
 - `AI_PROMPT_TEMPLATES.md`
 - `GITHUB_SYNC_CHECKLIST.md`
+
+## GitHub 持久记忆
+
+- 当前私有仓库：`https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`
+- 当前默认分支：`main`
+- 当前跨 AI / 跨窗口的标准记忆入口：
+  - `AI_STATE.json`
+  - `checkpoints/`
+  - 上述 Markdown 文档
+- 标准保存入口：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\Record-Checkpoint.ps1 -Mode Progress -Task "当前任务名" -Summary "当前已完成的这一步" -Push
+```
+
+- 如果对话或任务可能被截断，优先使用：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\Record-Checkpoint.ps1 -Mode Interrupt -Task "当前任务名" -Summary "中断前保存当前进度" -IncludeCode -Push
+```

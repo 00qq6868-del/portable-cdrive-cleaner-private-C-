@@ -18,11 +18,12 @@
 - 后台任务：`Services/OperationManager.cs`
 - 启动链路：`Program.cs`
 - 发布与同步：`publish.ps1`
+- GitHub 记忆与检查点：`tools/Record-Checkpoint.ps1`、`tools/Save-Handoff.ps1`
 
 ## 本轮准备修改
 
 ### 任务
-- 继续压缩主窗口小窗布局，让数据区明显变大
+- 返回 `Forms/MainForm.cs`，继续压缩主窗口小窗布局，让数据区明显变大
 
 ### 目标
 - 让用户在小窗时直接看到更多真实数据，而不是被顶部说明区压住
@@ -80,24 +81,43 @@
 - 状态：
   - 已完成并已推送 GitHub
 
+### 2026-04-24 GitHub 持久记忆与检查点收口
+- 范围：
+  - `AI_STATE.json`
+  - `checkpoints/`
+  - `tools/Record-Checkpoint.ps1`
+  - `tools/Save-Handoff.ps1`
+  - `README.md`
+  - `PROJECT_CONTEXT.md`
+  - `HANDOVER_FOR_OTHER_AI.md`
+  - `AI_PROMPT_TEMPLATES.md`
+  - `GITHUB_SYNC_CHECKLIST.md`
+- 已做：
+  - 增加机器可读状态文件
+  - 增加开始 / 进行中 / 完成 / 中断四类 checkpoint
+  - 把仓库地址、本地路径、安装路径写进跨 AI 模板
+  - 把桌面保存入口改成调用标准 checkpoint 脚本
+- 状态：
+  - 本轮已完成，接下来应使用标准 checkpoint 流程继续后续软件优化任务
+
 ## 进行中 / 被打断
 
 ### 当前正在做
 - 任务：
-  - 主窗口小窗布局继续收口
+  - 返回主窗口小窗布局继续收口
 - 当前进度：
-  - 已完成前两轮压缩
-  - 还没达到用户要求
+  - GitHub 持久记忆基座已完成
+  - 主窗口布局问题仍未继续推进新的代码轮次
 - 当前未完成：
-  - 顶部区仍然过高
-  - 数据区仍然不够大
+  - 主窗口顶部区仍然过高
+  - 小窗口数据区仍然不够大
 - 下一步精确落点：
-  - 继续从 `Forms/MainForm.cs` 的顶部宿主结构下手
-  - 优先考虑进一步合并视图切换 / 主按钮 / 教学条 / 盘符条 / 筛选条 / 汇总条
+  - 完成本轮 checkpoint 推送
+  - 然后回到 `Forms/MainForm.cs` 继续处理顶部宿主结构
 
 ## 尚未开始的源码方案
 - 退出后进程残留的专项收口
-- GitHub 进度保存进一步自动化
+- GitHub 进度保存更细粒度自动化
 - 更细粒度的“每个任务阶段自动写回日志”能力
 
 ## 回查 / 回调 / 回退记录
@@ -112,5 +132,4 @@
   - `D:\磁盘清理器\磁盘清理器.exe`
   - `2026-04-23 02:47:53`
 - 当前 GitHub 私有仓库：
-  - `origin/main`
-
+  - `https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`

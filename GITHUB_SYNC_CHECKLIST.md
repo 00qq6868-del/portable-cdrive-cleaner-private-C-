@@ -9,74 +9,57 @@
 - 项目已经初始化本地 Git 仓库
 - 当前没有 GitHub CLI
 - 当前 GitHub 私有远程已经接通
+- 当前远程地址：`https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`
 - 默认远程分支：`main`
 
-## 一次性准备
-
-### 第 1 步：初始化本地 Git
-在项目根目录执行：
-
-```powershell
-git init
-git add .
-git commit -m "chore: initialize project memory and handoff documents"
-```
-
-### 第 2 步：在 GitHub 网站创建私有仓库
-- 登录 GitHub
-- New repository
-- 仓库设为 `Private`
-- 仓库名建议：`portable-cdrive-cleaner-private`
-
-### 第 3 步：绑定远程仓库
-把下面的 `YOUR_REPO_URL` 换成你的 GitHub 私有仓库地址：
-
-```powershell
-git remote add origin YOUR_REPO_URL
-git branch -M main
-git push -u origin main
-```
-
-> 当前项目已完成这一步；后续主要使用“保存当前进度到GitHub”即可。
-
 ## 每次开始新任务前
-1. 先更新 `CURRENT_TASK.md`
-2. 如果用户新增规则，更新 `MEMORY.md`
-3. 先 `git pull`，避免别的窗口已经写过新内容
+1. 先拉最新状态：
 
 ```powershell
 git pull --rebase origin main
 ```
 
-## 每完成一个部分后
-1. 更新：
+2. 再读取：
+   - `AI_STATE.json`
+   - `PROJECT_CONTEXT.md`
    - `CURRENT_TASK.md`
-   - `OPTIMIZATION_LOG.md`
    - `TODO_NOT_FIXED.md`
-2. 然后提交并推送：
+   - `SOURCE_CHANGE_LEDGER.md`
+   - `INTERRUPTED_PROGRESS.md`
+
+3. 如果要正式开始新的工作阶段，先写开始检查点：
 
 ```powershell
-git add CURRENT_TASK.md OPTIMIZATION_LOG.md TODO_NOT_FIXED.md MEMORY.md HANDOVER_FOR_OTHER_AI.md
-git commit -m "docs: update progress and handoff state"
-git push origin main
+powershell -ExecutionPolicy Bypass -File .\tools\Record-Checkpoint.ps1 -Mode Start -Task "当前任务名" -Summary "准备开始本轮任务" -Push
+```
+
+## 每完成一个部分后
+1. 先更新 `CURRENT_TASK.md`
+2. 如果用户新增规则，更新 `MEMORY.md`
+3. 使用标准 checkpoint：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\Record-Checkpoint.ps1 -Mode Progress -Task "当前任务名" -Summary "当前已完成的这一步" -Push
 ```
 
 ## 如果对话快截断
 优先执行：
 
 ```powershell
-git add CURRENT_TASK.md OPTIMIZATION_LOG.md TODO_NOT_FIXED.md MEMORY.md HANDOVER_FOR_OTHER_AI.md
-git commit -m "docs: save handoff before interruption"
-git push origin main
+powershell -ExecutionPolicy Bypass -File .\tools\Record-Checkpoint.ps1 -Mode Interrupt -Task "当前任务名" -Summary "中断前保存当前进度" -IncludeCode -Push
 ```
 
-或者直接使用项目内脚本：
+## 如果本轮任务完成
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\Save-Handoff.ps1 -Message "docs: save handoff before interruption" -Push
+powershell -ExecutionPolicy Bypass -File .\tools\Record-Checkpoint.ps1 -Mode Finish -Task "当前任务名" -Summary "本轮任务已完成并完成收口" -IncludeCode -Push
 ```
 
-默认建议直接保存“代码 + 文档”：
+## 底层提交脚本
+
+`tools/Save-Handoff.ps1` 现在作为底层提交 / 推送器保留，标准流程优先通过 `tools/Record-Checkpoint.ps1` 调用。
+
+如果只想手动提交当前已写好的文档或代码，也可以直接使用：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\Save-Handoff.ps1 -Message "checkpoint: save docs and code progress" -IncludeCode -Push
@@ -85,4 +68,15 @@ powershell -ExecutionPolicy Bypass -File .\tools\Save-Handoff.ps1 -Message "chec
 ## 当前推荐
 - 平时直接双击桌面：
   - `保存当前进度到GitHub.cmd`
-- 这样会把当前代码和文档一起提交并推送
+- 现在它会调用标准 checkpoint 脚本，而不是只做盲提交
+
+## GitHub 不可访问回退
+- 如果新的 AI / API 窗口无法直接访问私有仓库，不要假装已经同步成功。
+- 默认回退方式：
+  - 复制 `AI_PROMPT_TEMPLATES.md` 里的“GitHub 不可访问回退模板”
+  - 再粘贴：
+    - `AI_STATE.json`
+    - `CURRENT_TASK.md`
+    - `SOURCE_CHANGE_LEDGER.md`
+    - `INTERRUPTED_PROGRESS.md`
+    - 最新 checkpoint 文件

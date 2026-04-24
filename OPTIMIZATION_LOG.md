@@ -132,3 +132,39 @@
   - 现在不同 AI / 不同窗口都可以通过 GitHub 私有仓库 + 项目文档继续接力
 - 风险 / 备注：
   - 仍需保持“先记录，再继续做下一步”的习惯，否则即使能推送，也会把不完整状态推上去
+
+## 2026-04-24 21:29:11
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：主窗口小窗布局继续收口
+- 检查点模式：Progress
+- 已完成：
+  - 已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、checkpoints 和标准 checkpoint 脚本；下一步返回 MainForm 小窗布局问题
+- 修改文件：
+- "AI_STATE.json","PROJECT_CONTEXT.md","README.md","MEMORY.md","HANDOVER_FOR_OTHER_AI.md","TODO_NOT_FIXED.md","SOURCE_CHANGE_LEDGER.md","AI_PROMPT_TEMPLATES.md","GITHUB_SYNC_CHECKLIST.md","tools/Save-Handoff.ps1","tools/Record-Checkpoint.ps1","tools/desktop-launchers/保存当前进度到GitHub.cmd"
+- 剩余项：
+- "主窗口小窗数据区仍然太少","主窗口顶部区域仍然过高","退出后进程残留问题仍未收口"
+- 检查点文件：
+  - checkpoints/2026-04-24_212911_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-24 21:29:38
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：主窗口小窗布局继续收口
+- 检查点模式：Progress
+- 已完成：
+  - 已完成 GitHub 持久记忆与跨 AI 接力收口，已新增 AI_STATE.json、checkpoints 和标准 checkpoint 脚本；下一步返回 MainForm 小窗布局问题
+- 修改文件：
+- "AI_STATE.json","PROJECT_CONTEXT.md","README.md","MEMORY.md","HANDOVER_FOR_OTHER_AI.md","TODO_NOT_FIXED.md","SOURCE_CHANGE_LEDGER.md","AI_PROMPT_TEMPLATES.md","GITHUB_SYNC_CHECKLIST.md","tools/Save-Handoff.ps1","tools/Record-Checkpoint.ps1","tools/desktop-launchers/保存当前进度到GitHub.cmd"
+- 剩余项：
+- "主窗口小窗数据区仍然太少","主窗口顶部区域仍然过高","退出后进程残留问题仍未收口"
+- 检查点文件：
+  - checkpoints/2026-04-24_212938_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Message = "docs: save handoff checkpoint",
     [switch]$IncludeCode,
     [switch]$Push
@@ -8,7 +8,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$requiredDocs = @(
+$requiredPaths = @(
+    "AI_STATE.json",
     "PROJECT_CONTEXT.md",
     "MEMORY.md",
     "CURRENT_TASK.md",
@@ -19,7 +20,8 @@ $requiredDocs = @(
     "INTERRUPTED_PROGRESS.md",
     "AI_PROMPT_TEMPLATES.md",
     "GITHUB_SYNC_CHECKLIST.md",
-    "README.md"
+    "README.md",
+    "checkpoints"
 )
 
 if (-not (Test-Path (Join-Path $projectRoot ".git"))) {
@@ -32,9 +34,9 @@ try {
         git add -A
     }
     else {
-        foreach ($doc in $requiredDocs) {
-            if (Test-Path (Join-Path $projectRoot $doc)) {
-                git add -- $doc
+        foreach ($pathEntry in $requiredPaths) {
+            if (Test-Path (Join-Path $projectRoot $pathEntry)) {
+                git add -- $pathEntry
             }
         }
     }
@@ -67,3 +69,4 @@ try {
 finally {
     Pop-Location
 }
+
