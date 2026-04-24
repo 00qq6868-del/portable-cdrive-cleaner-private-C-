@@ -23,18 +23,38 @@
 ## 本轮准备修改
 
 ### 任务
-- 返回 `Forms/MainForm.cs`，继续压缩主窗口小窗布局，让数据区明显变大
+- 落地“去闪动、缩放不卡、纯黑科技感、高清官方兜底图标、秒开感与跨 AI 持续记忆”第一轮代码收口
 
 ### 目标
-- 让用户在小窗时直接看到更多真实数据，而不是被顶部说明区压住
+- 去掉整块闪动和跑马灯，只保留百分比文字与静态绿色填充
+- 收口主窗口缩放期间的高频重排、图标列刷新和任务卡宽度抖动
+- 开始统一主窗与常驻工作窗口的纯黑主题
+- 把列表 fallback 图标换成官方主图标兜底
+- 把本轮状态持续写回 GitHub 持久记忆
 
 ### 计划涉及文件
+- `Forms/OperationProgressDialog.cs`
 - `Forms/MainForm.cs`
+- `Forms/CDriveSuggestionDialog.cs`
+- `Forms/ScheduleSettingsDialog.cs`
+- `Forms/RegressionAuditDialog.cs`
+- `Forms/CleanupConfirmationDialog.cs`
+- `Forms/DeploymentDialog.cs`
+- `Forms/ElevationPromptDialog.cs`
+- `Services/OperationManager.cs`
+- `Infrastructure/ApplicationIconCache.cs`
+- `MEMORY.md`
+- `CURRENT_TASK.md`
+- `TODO_NOT_FIXED.md`
+- `AI_STATE.json`
 
 ### 预期动作
-- 继续合并顶部结构
-- 减少多行工具区的垂直占高
-- 必要时把部分说明与状态迁到悬浮提示 / 单行摘要
+- 移除 `Marquee`
+- 去掉整窗 `Refresh()`
+- 给后台任务状态发布加节流和内容去重
+- 把缩放过程改成轻量刷新，重布局延后
+- 给图标列重绘与缩放解耦
+- 增加统一暗黑主题与官方兜底图标
 
 ## 已完成源码修改
 
@@ -104,16 +124,22 @@
 
 ### 当前正在做
 - 任务：
-  - 返回主窗口小窗布局继续收口
+  - 下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
 - 当前进度：
   - GitHub 持久记忆基座已完成
-  - 主窗口布局问题仍未继续推进新的代码轮次
+  - 已确认进度闪动和缩放卡顿的直接代码根因
+  - 即将开始修改进度反馈、缩放刷新、主题和图标
 - 当前未完成：
+  - 进度区整块闪动仍存在
+  - 缩放卡顿 / 变形仍存在
+  - 纯黑主题仍未落地
+  - 图标 fallback 仍不够清晰
+  - 启动体感仍需继续压缩
   - 主窗口顶部区仍然过高
   - 小窗口数据区仍然不够大
 - 下一步精确落点：
-  - 完成本轮 checkpoint 推送
-  - 然后回到 `Forms/MainForm.cs` 继续处理顶部宿主结构
+  - 先完成本轮 Start checkpoint
+  - 然后先改 `Forms/OperationProgressDialog.cs`、`Forms/MainForm.cs`、`Services/OperationManager.cs`
 
 ## 尚未开始的源码方案
 - 退出后进程残留的专项收口

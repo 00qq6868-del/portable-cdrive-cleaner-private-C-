@@ -232,3 +232,37 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-24 22:06:18
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
+- 检查点模式：Start
+- 已完成：
+  - 已确认进度区闪动和缩放卡顿的直接代码根因，开始修改进度反馈、缩放刷新、主题与图标。
+- 修改文件：
+- Forms/OperationProgressDialog.cs
+- Forms/MainForm.cs
+- Forms/CDriveSuggestionDialog.cs
+- Services/OperationManager.cs
+- Infrastructure/ApplicationIconCache.cs
+- MEMORY.md
+- CURRENT_TASK.md
+- TODO_NOT_FIXED.md
+- SOURCE_CHANGE_LEDGER.md
+- INTERRUPTED_PROGRESS.md
+- 剩余项：
+- 进度区整块闪动仍存在
+- 主窗口缩放卡顿 / 变形仍存在
+- 纯黑科技感主题仍未统一
+- 图标 fallback 仍不够清晰
+- 启动速度仍未达到秒开感
+- 主窗口小窗数据区仍然太少
+- 主窗口顶部区域仍然过高
+- 退出后进程残留问题仍未收口
+- 检查点文件：
+  - checkpoints/2026-04-24_220618_start.md
+- 是否请求推送：否
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
