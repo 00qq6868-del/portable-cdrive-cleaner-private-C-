@@ -329,3 +329,41 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-24 23:31:43
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
+- 检查点模式：Progress
+- 已完成：
+  - 已完成第二轮代码收口并同步安装版：新增 ThemedButton / ThemedProgressBar，自绘按钮与静态进度条替换关键原生控件；主窗后台任务区改为低频被动刷新并减少整卡重排；图标兜底切到 Windows Shell 官方 stock icon；主窗小窗顶部继续压缩；dotnet build 通过，publish.ps1 已同步到 D:\磁盘清理器\磁盘清理器.exe（2026-04-24 23:28:16），且已完成一次启动冒烟验证。
+- 修改文件：
+- Forms/ThemedButton.cs
+- Forms/ThemedProgressBar.cs
+- Forms/OperationProgressDialog.cs
+- Forms/MainForm.cs
+- Forms/CDriveSuggestionDialog.cs
+- Forms/ScheduleSettingsDialog.cs
+- Forms/RegressionAuditDialog.cs
+- Forms/CleanupConfirmationDialog.cs
+- Forms/DeploymentDialog.cs
+- Forms/ElevationPromptDialog.cs
+- Forms/UiScaleHelper.cs
+- Infrastructure/ApplicationIconCache.cs
+- Infrastructure/UiThemePalette.cs
+- Services/OperationManager.cs
+- CURRENT_TASK.md
+- TODO_NOT_FIXED.md
+- SOURCE_CHANGE_LEDGER.md
+- AI_STATE.json
+- INTERRUPTED_PROGRESS.md
+- OPTIMIZATION_LOG.md
+- 剩余项：
+- 进度区是否完全不再闪动，仍需安装版实机验收
+- 主窗口缩放卡顿
+- 检查点文件：
+  - checkpoints/2026-04-24_233143_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA

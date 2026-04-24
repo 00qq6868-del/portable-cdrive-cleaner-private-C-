@@ -62,6 +62,39 @@
 
 ## 已完成源码修改
 
+### 2026-04-24 下一轮收口第二轮代码落地
+- 范围：
+  - `Forms/ThemedProgressBar.cs`
+  - `Forms/ThemedButton.cs`
+  - `Forms/OperationProgressDialog.cs`
+  - `Forms/MainForm.cs`
+  - `Forms/CDriveSuggestionDialog.cs`
+  - `Forms/ScheduleSettingsDialog.cs`
+  - `Forms/RegressionAuditDialog.cs`
+  - `Forms/CleanupConfirmationDialog.cs`
+  - `Forms/DeploymentDialog.cs`
+  - `Forms/ElevationPromptDialog.cs`
+  - `Forms/UiScaleHelper.cs`
+  - `Services/OperationManager.cs`
+  - `Infrastructure/ApplicationIconCache.cs`
+  - `Infrastructure/UiThemePalette.cs`
+- 已做：
+  - 新增自绘深色按钮 `ThemedButton`，解决深色主题下禁用按钮文字发黑/难读问题
+  - 新增自绘静态进度条 `ThemedProgressBar`，彻底摆脱原生进度条的浅色轨道和整块闪动体感
+  - 主窗后台任务区改成“状态变化立即收口 + 被动 1 秒刷新耗时文案”，不再 `140ms` 整区反复刷新
+  - 后台任务卡改成仅在尺寸变化时重排，状态变化只改文字和值
+  - 主窗 UltraCompact 进一步压缩顶部区，并在最小布局下隐藏盘符摘要行，把空间优先还给数据区
+  - 为主窗与主要布局面板补双缓冲，减少缩放时白屏/撕裂体感
+  - 图标兜底改成 Windows Shell 官方 stock icon，并把图标列后台刷新频率降到每 24 个一批
+  - 主要工作窗口标题栏切到沉浸式深色，主按钮统一到纯黑科技感样式
+  - `UiScaleHelper` 增加尺寸测量缓存，减少缩放和重布局时的重复测量
+- 状态：
+  - 已完成代码修改、编译通过、安装版已同步
+- 结果：
+  - 第二轮收口已经落地到安装版 `D:\磁盘清理器\磁盘清理器.exe`，但“是否仍闪、是否仍卡顿、图标是否已足够清晰、暗黑风是否达标”仍需用户继续以真实界面验收
+- 安装版时间戳：
+  - `2026-04-24 23:28:16`
+
 ### 2026-04-24 下一轮收口第一轮代码落地
 - 范围：
   - `Forms/OperationProgressDialog.cs`
@@ -158,7 +191,7 @@
   - 下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
 - 当前进度：
   - GitHub 持久记忆基座已完成
-  - 已完成第一轮代码落地、编译和安装版同步
+  - 已完成第二轮代码落地、编译和安装版同步
   - 发布时再次抓到“旧进程占用安装版 EXE”问题
 - 当前未完成：
   - 进度区是否完全不再闪动，仍需实机验收
@@ -170,7 +203,7 @@
   - 小窗口数据区仍然不够大
 - 下一步精确落点：
   - 先写本轮 Progress checkpoint 并推送 GitHub
-  - 然后继续回到主窗口小窗数据区 / 顶部区占高 / 退出进程残留这三项
+  - 然后继续回到“仍闪 / 仍卡 / 图标仍糊 / 顶部仍高 / 小窗数据仍少 / 退出进程残留”这几项继续收口
 
 ## 尚未开始的源码方案
 - 退出后进程残留的专项收口
@@ -187,6 +220,6 @@
 ## 发布状态
 - 最近一次已知安装版时间戳：
   - `D:\磁盘清理器\磁盘清理器.exe`
-  - `2026-04-24 22:32:15`
+  - `2026-04-24 23:28:16`
 - 当前 GitHub 私有仓库：
   - `https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`
