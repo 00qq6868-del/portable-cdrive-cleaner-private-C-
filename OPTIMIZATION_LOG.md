@@ -405,3 +405,25 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-24 23:35:20
+- 模块：GitHub 状态对齐修正
+- 任务：补齐 checkpoint 被截断的未完成项，防止跨窗口接力时丢状态
+- 已完成：
+  - 已修正 `AI_STATE.json`
+  - 已修正 `CURRENT_TASK.md`
+  - 已修正 `INTERRUPTED_PROGRESS.md`
+  - 已把当前阶段统一回写为“下一轮收口 - 去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆”
+  - 已把剩余未完成项完整补齐为 8 项，避免只剩两条截断记录
+- 修改文件：
+  - `AI_STATE.json`
+  - `CURRENT_TASK.md`
+  - `INTERRUPTED_PROGRESS.md`
+  - `OPTIMIZATION_LOG.md`
+- 是否已发布到安装版：否
+- 安装版时间戳：
+  - 不适用（源码和安装版已在上一阶段同步）
+- 结果：
+  - 跨 AI / 跨窗口继续时，状态文件现在能完整保留“已完成、未完成、下一步”的真实情况
+- 风险 / 备注：
+  - 后续继续用 checkpoint 脚本时，仍需留意命令行传参不要把剩余项截断
