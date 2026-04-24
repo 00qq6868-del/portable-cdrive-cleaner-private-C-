@@ -20,6 +20,8 @@ public sealed class CDriveSuggestionDialog : Form
     private readonly Button _deleteButton = new();
     private readonly Button _revealButton = new();
     private readonly Dictionary<string, Image> _candidateIcons = new(StringComparer.OrdinalIgnoreCase);
+    private bool _resizeDragInProgress;
+    private bool _pendingIconColumnRefresh;
     private bool _isPartialResult;
     private string _phaseLabel = string.Empty;
     private CancellationTokenSource? _iconLoadCts;
@@ -43,10 +45,25 @@ public sealed class CDriveSuggestionDialog : Form
         ShowInTaskbar = true;
         MinimumSize = new Size(1000, 620);
         ClientSize = new Size(1220, 760);
-        BackColor = Color.FromArgb(243, 246, 248);
+        UiThemePalette.ApplyFormChrome(this);
+        SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw, true);
 
         BuildUi();
-        Resize += (_, _) => UpdateResponsiveLayout();
+        ApplyThemeColors();
+        Resize += (_, _) =>
+        {
+            if (!_resizeDragInProgress)
+            {
+                UpdateResponsiveLayout();
+            }
+        };
+        ResizeBegin += (_, _) => _resizeDragInProgress = true;
+        ResizeEnd += (_, _) =>
+        {
+            _resizeDragInProgress = false;
+            UpdateResponsiveLayout();
+            FlushPendingIconInvalidate();
+        };
         Shown += (_, _) => UpdateResponsiveLayout();
         DpiChanged += (_, _) => BeginInvoke(new Action(() =>
         {
@@ -97,6 +114,7 @@ public sealed class CDriveSuggestionDialog : Form
             Padding = new Padding(16, 14, 16, 14),
             Margin = Padding.Empty
         };
+        UiThemePalette.ApplySurface(summaryCard);
         root.Controls.Add(summaryCard, 0, 1);
 
         var summaryLayout = new TableLayoutPanel
@@ -135,6 +153,7 @@ public sealed class CDriveSuggestionDialog : Form
             Padding = new Padding(0),
             Margin = new Padding(0, 12, 0, 0)
         };
+        UiThemePalette.ApplySurface(gridCard);
         root.Controls.Add(gridCard, 0, 2);
 
         ConfigureGrid();
@@ -382,7 +401,6 @@ public sealed class CDriveSuggestionDialog : Form
                     Text,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
-                DialogResult = DialogResult.OK;
                 Close();
                 return;
             }
@@ -459,7 +477,6 @@ public sealed class CDriveSuggestionDialog : Form
         }
 
         DeleteCandidates = selected;
-        DialogResult = DialogResult.Yes;
         Close();
     }
 
@@ -483,9 +500,9 @@ public sealed class CDriveSuggestionDialog : Form
         var column = _grid.Columns[e.ColumnIndex];
         if (column.DataPropertyName == nameof(MigrationCandidate.Selected) && !IsCandidateCheckable(candidate))
         {
-            e.CellStyle.BackColor = Color.FromArgb(246, 247, 249);
-            e.CellStyle.SelectionBackColor = Color.FromArgb(246, 247, 249);
-            e.CellStyle.SelectionForeColor = Color.FromArgb(160, 168, 176);
+            e.CellStyle.BackColor = UiThemePalette.SurfaceMuted;
+            e.CellStyle.SelectionBackColor = UiThemePalette.SurfaceMuted;
+            e.CellStyle.SelectionForeColor = UiThemePalette.DisabledText;
             return;
         }
 
@@ -721,12 +738,24 @@ public sealed class CDriveSuggestionDialog : Form
             return;
         }
 
+        if (_resizeDragInProgress)
+        {
+            _pendingIconColumnRefresh = true;
+            return;
+        }
+
         try
         {
             BeginInvoke(new Action(() =>
             {
                 if (IsDisposed || _iconColumn.Index < 0)
                 {
+                    return;
+                }
+
+                if (_resizeDragInProgress)
+                {
+                    _pendingIconColumnRefresh = true;
                     return;
                 }
 
@@ -753,7 +782,7 @@ public sealed class CDriveSuggestionDialog : Form
     {
         var iconSourcePath = ResolveCandidateIconSourcePath(candidate);
         return string.IsNullOrWhiteSpace(iconSourcePath)
-            ? $"{candidate.Name}\r\n暂时没有识别到专属程序图标，先用通用程序图标显示。"
+            ? $"{candidate.Name}\r\n暂时没有识别到专属程序图标，先用官方兜底图标显示。"
             : $"{candidate.Name}\r\n图标来源：{iconSourcePath}";
     }
 
@@ -887,12 +916,8 @@ public sealed class CDriveSuggestionDialog : Form
         button.Margin = new Padding(10, 0, 0, 0);
         button.Padding = new Padding(18, 0, 18, 0);
         button.AutoEllipsis = false;
-        button.FlatStyle = FlatStyle.Flat;
-        button.BackColor = primary ? Color.FromArgb(31, 166, 124) : Color.White;
-        button.ForeColor = primary ? Color.White : Color.FromArgb(36, 52, 65);
+        UiThemePalette.ApplyButtonStyle(button, primary);
         button.TextAlign = ContentAlignment.MiddleCenter;
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = primary ? Color.FromArgb(31, 166, 124) : Color.FromArgb(214, 220, 227);
         UiScaleHelper.RegisterButtonSizing(button, text, 128, 48, minHeight: 42, verticalPadding: 18);
     }
 
@@ -919,5 +944,31 @@ public sealed class CDriveSuggestionDialog : Form
         _summaryLabel.MaximumSize = new Size(wrapWidth, 0);
         _phaseStatusLabel.MaximumSize = new Size(wrapWidth, 0);
         _teachingLabel.MaximumSize = new Size(wrapWidth, 0);
+    }
+
+    private void ApplyThemeColors()
+    {
+        UiThemePalette.ApplyTreeTheme(this);
+        UiThemePalette.ApplyDataGridTheme(_grid);
+        _summaryLabel.ForeColor = UiThemePalette.TextSecondary;
+        _phaseStatusLabel.ForeColor = UiThemePalette.AccentStrong;
+        _teachingLabel.ForeColor = UiThemePalette.TextSecondary;
+    }
+
+    private void FlushPendingIconInvalidate()
+    {
+        if (!_pendingIconColumnRefresh || IsDisposed || !IsHandleCreated || _iconColumn.Index < 0)
+        {
+            return;
+        }
+
+        _pendingIconColumnRefresh = false;
+        try
+        {
+            _grid.InvalidateColumn(_iconColumn.Index);
+        }
+        catch
+        {
+        }
     }
 }

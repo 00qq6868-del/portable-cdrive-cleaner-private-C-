@@ -1,3 +1,4 @@
+using PortableCDriveCleaner.Infrastructure;
 using PortableCDriveCleaner.Models;
 
 namespace PortableCDriveCleaner.Forms;
@@ -26,7 +27,7 @@ public sealed class CleanupConfirmationDialog : Form
         ShowInTaskbar = false;
         MinimumSize = new Size(920, 620);
         ClientSize = new Size(1080, preview.HasResidueActions ? 760 : 660);
-        BackColor = Color.FromArgb(243, 246, 248);
+        UiThemePalette.ApplyFormChrome(this);
 
         BuildUi(appName);
         Resize += (_, _) => UpdateResponsiveLayout();
@@ -36,6 +37,9 @@ public sealed class CleanupConfirmationDialog : Form
             UiScaleHelper.RefreshRegisteredButtonSizing(this);
             UpdateResponsiveLayout();
         }));
+        UiThemePalette.ApplyTreeTheme(this);
+        UiThemePalette.ApplyDataGridTheme(_itemGrid);
+        UiThemePalette.ApplyDataGridTheme(_residueGrid);
         UpdateConfirmState();
     }
 
@@ -46,7 +50,8 @@ public sealed class CleanupConfirmationDialog : Form
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 4,
-            Padding = new Padding(18, 16, 18, 16)
+            Padding = new Padding(18, 16, 18, 16),
+            BackColor = UiThemePalette.WindowBackground
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -318,20 +323,11 @@ public sealed class CleanupConfirmationDialog : Form
         var card = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.White,
+            BackColor = UiThemePalette.SurfaceRaised,
             Padding = padding,
             Margin = Padding.Empty
         };
-
-        card.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(226, 232, 237));
-            var bounds = card.ClientRectangle;
-            bounds.Width -= 1;
-            bounds.Height -= 1;
-            e.Graphics.DrawRectangle(pen, bounds);
-        };
-
+        UiThemePalette.AttachBorderPainter(card);
         return card;
     }
 
@@ -367,13 +363,9 @@ public sealed class CleanupConfirmationDialog : Form
             Text = text,
             Margin = new Padding(10, 0, 0, 0),
             Padding = new Padding(16, 0, 16, 0),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = primary ? Color.FromArgb(31, 166, 124) : Color.White,
-            ForeColor = primary ? Color.White : Color.FromArgb(36, 52, 65),
             TextAlign = ContentAlignment.MiddleCenter
         };
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = primary ? Color.FromArgb(31, 166, 124) : Color.FromArgb(214, 220, 227);
+        UiThemePalette.ApplyButtonStyle(button, primary);
         UiScaleHelper.RegisterButtonSizing(button, text, 100, 42, minHeight: 42, verticalPadding: 18);
         return button;
     }

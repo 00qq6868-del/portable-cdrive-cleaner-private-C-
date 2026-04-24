@@ -55,18 +55,19 @@ public sealed class ScheduleSettingsDialog : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         AutoScaleMode = AutoScaleMode.Dpi;
         MaximizeBox = false;
-        MinimizeBox = false;
-        ShowInTaskbar = false;
+        MinimizeBox = true;
+        ShowInTaskbar = true;
         MinimumSize = new Size(640, 460);
         ClientSize = new Size(700, 480);
-        BackColor = Color.FromArgb(243, 246, 248);
+        UiThemePalette.ApplyFormChrome(this);
 
         var rootLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             Padding = new Padding(18, 16, 18, 16),
             ColumnCount = 1,
-            RowCount = 3
+            RowCount = 3,
+            BackColor = UiThemePalette.WindowBackground
         };
         rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         rootLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -95,9 +96,10 @@ public sealed class ScheduleSettingsDialog : Form
         _card.AutoSize = true;
         _card.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         _card.Dock = DockStyle.Top;
-        _card.BackColor = Color.White;
+        _card.BackColor = UiThemePalette.SurfaceRaised;
         _card.Padding = new Padding(18, 16, 18, 16);
         _card.Margin = Padding.Empty;
+        UiThemePalette.AttachBorderPainter(_card);
         scrollHost.Controls.Add(_card);
 
         var cardLayout = new TableLayoutPanel
@@ -199,6 +201,8 @@ public sealed class ScheduleSettingsDialog : Form
         var saveButton = CreateButton("保存并同步", primary: true);
         saveButton.Click += (_, _) => SaveAndClose();
         rightActions.Controls.Add(saveButton);
+
+        ApplyThemeColors();
     }
 
     private void LoadFromSettings()
@@ -235,7 +239,6 @@ public sealed class ScheduleSettingsDialog : Form
         _settingsService.Save(_settings);
         _schedulerService.Sync(_context, _settings);
         SettingsChanged = true;
-        DialogResult = DialogResult.OK;
         Close();
     }
 
@@ -298,13 +301,9 @@ public sealed class ScheduleSettingsDialog : Form
             Margin = new Padding(0, 0, 8, 0),
             Padding = new Padding(14, 0, 14, 0),
             Text = text,
-            TextAlign = ContentAlignment.MiddleCenter,
-            FlatStyle = FlatStyle.Flat,
-            BackColor = primary ? Color.FromArgb(31, 166, 124) : Color.White,
-            ForeColor = primary ? Color.White : Color.FromArgb(37, 54, 68)
+            TextAlign = ContentAlignment.MiddleCenter
         };
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = primary ? Color.FromArgb(31, 166, 124) : Color.FromArgb(214, 221, 228);
+        UiThemePalette.ApplyButtonStyle(button, primary);
         UiScaleHelper.RegisterButtonSizing(button, text, 96, 36, minHeight: 42, verticalPadding: 18);
         return button;
     }
@@ -319,5 +318,15 @@ public sealed class ScheduleSettingsDialog : Form
         _scheduleCheckBox.MaximumSize = new Size(wrapWidth, 0);
         _safeOnlyCheckBox.MaximumSize = new Size(wrapWidth, 0);
         _duplicateCheckBox.MaximumSize = new Size(wrapWidth, 0);
+    }
+
+    private void ApplyThemeColors()
+    {
+        UiThemePalette.ApplyTreeTheme(this);
+        UiThemePalette.ApplyNumericUpDownStyle(_intervalNumeric);
+        UiThemePalette.ApplyNumericUpDownStyle(_thresholdNumeric);
+        _introLabel.ForeColor = UiThemePalette.TextSecondary;
+        _memoryHintLabel.ForeColor = UiThemePalette.TextMuted;
+        _statusLabel.ForeColor = UiThemePalette.TextSecondary;
     }
 }

@@ -20,23 +20,25 @@ public sealed class OperationProgressDialog : Form
     public OperationProgressDialog(string title, string heading, string initialMessage)
     {
         Text = title;
-        StartPosition = FormStartPosition.CenterScreen;
+        StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.Sizable;
         AutoScaleMode = AutoScaleMode.Dpi;
         MinimizeBox = true;
         MaximizeBox = false;
-        ShowInTaskbar = false;
-        ControlBox = false;
+        ShowInTaskbar = true;
+        ControlBox = true;
         MinimumSize = new Size(700, 250);
         ClientSize = new Size(760, 260);
-        BackColor = Color.FromArgb(243, 246, 248);
+        UiThemePalette.ApplyFormChrome(this);
+        SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw, true);
 
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 4,
-            Padding = new Padding(20, 18, 20, 18)
+            Padding = new Padding(20, 18, 20, 18),
+            BackColor = UiThemePalette.WindowBackground
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -47,19 +49,19 @@ public sealed class OperationProgressDialog : Form
 
         _headingLabel.AutoSize = true;
         _headingLabel.Font = new Font("Microsoft YaHei UI", 13, FontStyle.Bold);
-        _headingLabel.ForeColor = Color.FromArgb(27, 42, 56);
+        _headingLabel.ForeColor = UiThemePalette.TextPrimary;
         _headingLabel.Margin = new Padding(0, 0, 0, 10);
         _headingLabel.Text = heading;
         root.Controls.Add(_headingLabel, 0, 0);
 
         _messageLabel.AutoSize = true;
-        _messageLabel.ForeColor = Color.FromArgb(76, 90, 101);
+        _messageLabel.ForeColor = UiThemePalette.TextSecondary;
         _messageLabel.Margin = new Padding(0, 0, 0, 14);
         _messageLabel.Text = initialMessage;
         root.Controls.Add(_messageLabel, 0, 1);
 
         _detailLabel.AutoSize = true;
-        _detailLabel.ForeColor = Color.FromArgb(46, 96, 78);
+        _detailLabel.ForeColor = UiThemePalette.AccentStrong;
         _detailLabel.Font = new Font("Microsoft YaHei UI", 8.6f, FontStyle.Bold);
         _detailLabel.Margin = new Padding(0, 0, 0, 10);
         _detailLabel.Text = "0% · 正在估算剩余时间";
@@ -80,28 +82,34 @@ public sealed class OperationProgressDialog : Form
         Shown += (_, _) => UpdateResponsiveLayout();
         DpiChanged += (_, _) => BeginInvoke(new Action(UpdateResponsiveLayout));
         FormClosed += (_, _) => _detailRefreshTimer.Stop();
+        UiThemePalette.ApplyTreeTheme(this);
     }
 
     public void Apply(DeploymentProgressUpdate update)
     {
+        if (IsDisposed || !IsHandleCreated)
+        {
+            return;
+        }
+
         _currentPercent = Math.Clamp(update.Percent, 0, 100);
         _currentIsIndeterminate = update.IsIndeterminate;
         _currentDetailText = update.DetailText ?? string.Empty;
         _currentProcessedBytes = update.ProcessedBytes;
         _currentTotalBytes = update.TotalBytes;
-        _messageLabel.Text = string.IsNullOrWhiteSpace(update.Message) ? _messageLabel.Text : update.Message;
-
-        _progressBar.Style = _currentIsIndeterminate && _currentPercent <= 0
-            ? ProgressBarStyle.Marquee
-            : ProgressBarStyle.Continuous;
-
-        if (_progressBar.Style == ProgressBarStyle.Continuous)
+        if (!string.IsNullOrWhiteSpace(update.Message) && !string.Equals(_messageLabel.Text, update.Message, StringComparison.Ordinal))
         {
-            _progressBar.Value = _currentPercent;
+            _messageLabel.Text = update.Message;
+        }
+
+        _progressBar.Style = ProgressBarStyle.Continuous;
+        var displayPercent = GetDisplayPercent();
+        if (_progressBar.Value != displayPercent)
+        {
+            _progressBar.Value = displayPercent;
         }
 
         UpdateDetailText();
-        Refresh();
     }
 
     private void UpdateDetailText()
@@ -191,6 +199,16 @@ public sealed class OperationProgressDialog : Form
         return extraLines.Count == 0
             ? summary
             : $"{summary}\r\n{string.Join("\r\n", extraLines)}";
+    }
+
+    private int GetDisplayPercent()
+    {
+        if (_currentPercent > 0)
+        {
+            return _currentPercent;
+        }
+
+        return _currentIsIndeterminate ? 8 : 0;
     }
 
     private static string FormatDuration(TimeSpan duration)

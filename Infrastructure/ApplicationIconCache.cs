@@ -6,13 +6,26 @@ namespace PortableCDriveCleaner.Infrastructure;
 
 public static class ApplicationIconCache
 {
-    private const int SmallIconSize = 18;
+    private const int SmallIconSize = 20;
+    private const int MinimumVisiblePixelCount = 18;
 
     private static readonly ConcurrentDictionary<string, Image> Cache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Lazy<Image> FallbackIcon = new(() => CreateBitmap(SystemIcons.Application));
+    private static readonly ConcurrentDictionary<int, Image> FallbackIcons = new();
+    private static readonly Lazy<Icon> AppIcon = new(LoadApplicationIcon);
 
     public static Image GetSmallIcon(string? iconSourcePath, string? installRoot)
     {
+        return GetIcon(iconSourcePath, installRoot, SmallIconSize);
+    }
+
+    public static Icon GetAppIcon()
+    {
+        return (Icon)AppIcon.Value.Clone();
+    }
+
+    public static Image GetIcon(string? iconSourcePath, string? installRoot, int size)
+    {
+        var normalizedSize = NormalizeSize(size);
         foreach (var candidate in EnumerateCandidates(iconSourcePath, installRoot))
         {
             var normalized = NormalizeIconPath(candidate);
@@ -21,14 +34,15 @@ public static class ApplicationIconCache
                 continue;
             }
 
-            var image = Cache.GetOrAdd(normalized, LoadImageFromPath);
-            if (!ReferenceEquals(image, FallbackIcon.Value))
+            var cacheKey = $"{normalizedSize}|{normalized}";
+            var image = Cache.GetOrAdd(cacheKey, _ => LoadImageFromPath(normalized, normalizedSize));
+            if (!ReferenceEquals(image, GetFallbackIcon(normalizedSize)))
             {
                 return image;
             }
         }
 
-        return FallbackIcon.Value;
+        return GetFallbackIcon(normalizedSize);
     }
 
     private static IEnumerable<string> EnumerateCandidates(string? iconSourcePath, string? installRoot)
@@ -72,40 +86,109 @@ public static class ApplicationIconCache
         return !string.IsNullOrWhiteSpace(normalized) && seen.Add(normalized);
     }
 
-    private static Image LoadImageFromPath(string normalizedPath)
+    private static Image LoadImageFromPath(string normalizedPath, int size)
     {
         try
         {
             if (normalizedPath.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
             {
-                using var ico = new Icon(normalizedPath, new Size(SmallIconSize, SmallIconSize));
-                return CreateBitmap(ico);
+                using var ico = new Icon(normalizedPath, new Size(size, size));
+                return CreateValidatedBitmap(ico, size);
             }
 
             using var icon = Icon.ExtractAssociatedIcon(normalizedPath);
             if (icon is not null)
             {
-                return CreateBitmap(icon);
+                return CreateValidatedBitmap(icon, size);
             }
         }
         catch
         {
         }
 
-        return FallbackIcon.Value;
+        return GetFallbackIcon(size);
     }
 
-    private static Bitmap CreateBitmap(Icon icon)
+    private static Image CreateValidatedBitmap(Icon icon, int size)
+    {
+        var bitmap = CreateBitmap(icon, size);
+        if (HasVisiblePixels(bitmap))
+        {
+            return bitmap;
+        }
+
+        bitmap.Dispose();
+        return GetFallbackIcon(size);
+    }
+
+    private static Image GetFallbackIcon(int size)
+    {
+        return FallbackIcons.GetOrAdd(size, CreateFallbackIcon);
+    }
+
+    private static Image CreateFallbackIcon(int size)
+    {
+        try
+        {
+            using var icon = new Icon(Application.ExecutablePath, new Size(size, size));
+            return CreateBitmap(icon, size);
+        }
+        catch
+        {
+            using var icon = SystemIcons.Application;
+            return CreateBitmap(icon, size);
+        }
+    }
+
+    private static Icon LoadApplicationIcon()
+    {
+        try
+        {
+            return new Icon(Application.ExecutablePath);
+        }
+        catch
+        {
+            return (Icon)SystemIcons.Application.Clone();
+        }
+    }
+
+    private static Bitmap CreateBitmap(Icon icon, int size)
     {
         using var sourceBitmap = icon.ToBitmap();
-        var bitmap = new Bitmap(SmallIconSize, SmallIconSize);
+        var bitmap = new Bitmap(size, size);
         using var graphics = Graphics.FromImage(bitmap);
         graphics.Clear(Color.Transparent);
         graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
         graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
         graphics.SmoothingMode = SmoothingMode.HighQuality;
-        graphics.DrawImage(sourceBitmap, new Rectangle(0, 0, SmallIconSize, SmallIconSize));
+        graphics.DrawImage(sourceBitmap, new Rectangle(0, 0, size, size));
         return bitmap;
+    }
+
+    private static bool HasVisiblePixels(Bitmap bitmap)
+    {
+        var visiblePixels = 0;
+        for (var x = 0; x < bitmap.Width; x++)
+        {
+            for (var y = 0; y < bitmap.Height; y++)
+            {
+                if (bitmap.GetPixel(x, y).A > 24)
+                {
+                    visiblePixels++;
+                    if (visiblePixels >= MinimumVisiblePixelCount)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static int NormalizeSize(int size)
+    {
+        return Math.Clamp(size, 16, 256);
     }
 
     private static string NormalizeIconPath(string? rawPath)

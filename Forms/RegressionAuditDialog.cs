@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using PortableCDriveCleaner.Infrastructure;
 using PortableCDriveCleaner.Models;
 
 namespace PortableCDriveCleaner.Forms;
@@ -24,12 +25,16 @@ public sealed class RegressionAuditDialog : Form
 
         Text = "问题结案清单";
         StartPosition = FormStartPosition.CenterParent;
+        FormBorderStyle = FormBorderStyle.Sizable;
         AutoScaleMode = AutoScaleMode.Dpi;
+        MinimizeBox = true;
+        ShowInTaskbar = true;
         MinimumSize = new Size(980, 720);
         ClientSize = new Size(1180, 820);
-        BackColor = Color.FromArgb(243, 246, 248);
+        UiThemePalette.ApplyFormChrome(this);
 
         BuildUi(runtimeInfoText);
+        ApplyThemeColors();
         Resize += (_, _) => UpdateResponsiveLayout();
         Shown += (_, _) => UpdateResponsiveLayout();
         DpiChanged += (_, _) => BeginInvoke(new Action(() =>
@@ -50,6 +55,7 @@ public sealed class RegressionAuditDialog : Form
             RowCount = 4,
             Padding = new Padding(18, 16, 18, 14)
         };
+        root.BackColor = UiThemePalette.WindowBackground;
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -122,7 +128,7 @@ public sealed class RegressionAuditDialog : Form
         root.Controls.Add(gridPanel, 0, 1);
 
         _grid.Dock = DockStyle.Fill;
-        _grid.BackgroundColor = Color.White;
+        _grid.BackgroundColor = UiThemePalette.Surface;
         _grid.BorderStyle = BorderStyle.None;
         _grid.AllowUserToAddRows = false;
         _grid.AllowUserToDeleteRows = false;
@@ -174,7 +180,7 @@ public sealed class RegressionAuditDialog : Form
         detailLayout.Controls.Add(_detailTitleLabel, 0, 0);
 
         _detailBox.Dock = DockStyle.Fill;
-        _detailBox.BackColor = Color.FromArgb(250, 252, 253);
+        _detailBox.BackColor = UiThemePalette.SurfaceMuted;
         _detailBox.Font = new Font("Microsoft YaHei UI", 9);
         _detailBox.Margin = Padding.Empty;
         detailLayout.Controls.Add(_detailBox, 0, 1);
@@ -190,11 +196,7 @@ public sealed class RegressionAuditDialog : Form
         root.Controls.Add(footerPanel, 0, 3);
 
         _closeButton.AutoSize = false;
-        _closeButton.FlatStyle = FlatStyle.Flat;
-        _closeButton.FlatAppearance.BorderColor = Color.FromArgb(214, 221, 228);
-        _closeButton.FlatAppearance.BorderSize = 1;
-        _closeButton.BackColor = Color.White;
-        _closeButton.ForeColor = Color.FromArgb(37, 54, 68);
+        UiThemePalette.ApplyButtonStyle(_closeButton, primary: false);
         _closeButton.Margin = Padding.Empty;
         _closeButton.Text = "关闭";
         _closeButton.Click += (_, _) => Close();
@@ -368,19 +370,19 @@ public sealed class RegressionAuditDialog : Form
         var entry = _rows[e.RowIndex];
         e.CellStyle.ForeColor = entry.Status switch
         {
-            RegressionAuditStatus.Resolved => Color.FromArgb(28, 111, 83),
-            RegressionAuditStatus.Partial => Color.FromArgb(156, 96, 26),
-            RegressionAuditStatus.ProtectedRule => Color.FromArgb(100, 52, 143),
-            RegressionAuditStatus.FollowUp => Color.FromArgb(33, 91, 148),
-            _ => Color.FromArgb(56, 70, 82)
+            RegressionAuditStatus.Resolved => UiThemePalette.AccentStrong,
+            RegressionAuditStatus.Partial => UiThemePalette.Warning,
+            RegressionAuditStatus.ProtectedRule => UiThemePalette.Info,
+            RegressionAuditStatus.FollowUp => UiThemePalette.TextSecondary,
+            _ => UiThemePalette.TextSecondary
         };
         e.CellStyle.BackColor = entry.Status switch
         {
-            RegressionAuditStatus.Resolved => Color.FromArgb(237, 248, 244),
-            RegressionAuditStatus.Partial => Color.FromArgb(255, 247, 232),
-            RegressionAuditStatus.ProtectedRule => Color.FromArgb(245, 238, 252),
-            RegressionAuditStatus.FollowUp => Color.FromArgb(235, 245, 255),
-            _ => Color.White
+            RegressionAuditStatus.Resolved => UiThemePalette.AccentSurface,
+            RegressionAuditStatus.Partial => UiThemePalette.WarningSurface,
+            RegressionAuditStatus.ProtectedRule => UiThemePalette.InfoSurface,
+            RegressionAuditStatus.FollowUp => UiThemePalette.SurfaceMuted,
+            _ => UiThemePalette.Surface
         };
         e.CellStyle.SelectionBackColor = e.CellStyle.BackColor;
         e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
@@ -391,24 +393,26 @@ public sealed class RegressionAuditDialog : Form
         var panel = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.White,
+            BackColor = UiThemePalette.SurfaceRaised,
             Margin = Padding.Empty
         };
-
-        panel.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(226, 232, 237));
-            var bounds = panel.ClientRectangle;
-            bounds.Width -= 1;
-            bounds.Height -= 1;
-            e.Graphics.DrawRectangle(pen, bounds);
-        };
-
+        UiThemePalette.AttachBorderPainter(panel);
         return panel;
     }
 
     private void UpdateResponsiveLayout()
     {
         _runtimeLabel.MaximumSize = new Size(UiScaleHelper.MeasureWrapWidth(ClientSize.Width, 100, minWidth: 520), 0);
+    }
+
+    private void ApplyThemeColors()
+    {
+        UiThemePalette.ApplyTreeTheme(this);
+        UiThemePalette.ApplyDataGridTheme(_grid);
+        _summaryLabel.ForeColor = UiThemePalette.Info;
+        _openItemsLabel.ForeColor = UiThemePalette.Warning;
+        _runtimeLabel.ForeColor = UiThemePalette.TextMuted;
+        _detailTitleLabel.ForeColor = UiThemePalette.TextPrimary;
+        _detailBox.ForeColor = UiThemePalette.TextSecondary;
     }
 }

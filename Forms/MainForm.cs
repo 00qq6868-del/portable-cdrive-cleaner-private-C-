@@ -116,6 +116,8 @@ public sealed class MainForm : Form
     private readonly LinkLabel _retryBlockedLink = new();
     private readonly ToolTip _toolTip = new();
     private CDriveSuggestionDialog? _activeCDriveSuggestionDialog;
+    private ScheduleSettingsDialog? _activeScheduleSettingsDialog;
+    private RegressionAuditDialog? _activeRegressionAuditDialog;
 
     private readonly DataGridViewCheckBoxColumn _selectColumn = new();
     private readonly DataGridViewCheckBoxColumn _overviewSelectColumn = new();
@@ -164,6 +166,10 @@ public sealed class MainForm : Form
     private bool _resizeDragInProgress;
     private bool _resizeRefreshPending;
     private bool _pendingResizeForceLayout;
+    private bool _pendingJobCardWidthRefresh;
+    private bool _pendingCleanupIconColumnRefresh;
+    private bool _pendingOverviewIconColumnRefresh;
+    private bool _pendingInfrequentIconColumnRefresh;
     private Control? _activeContentControl;
     private LayoutDensityMode _layoutDensityMode;
     private bool IsWideMode => WindowState == FormWindowState.Maximized || ClientSize.Width >= WideModeThreshold;
@@ -212,9 +218,10 @@ public sealed class MainForm : Form
         _resizeRefreshTimer.Interval = ResizeRefreshIntervalMilliseconds;
         _resizeRefreshTimer.Tick += (_, _) => FlushDeferredResizeRefresh(forceLayout: _pendingResizeForceLayout);
 
-        SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+        SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw, true);
 
         BuildUi();
+        ApplyThemeColors();
         UpdateRegressionAuditMenuText();
         ApplyPersistedWindowBounds();
         InitializeFilterControls();
@@ -253,7 +260,11 @@ public sealed class MainForm : Form
             _resizeRefreshTimer.Stop();
             PersistWindowState();
         };
-        ResizeBegin += (_, _) => _resizeDragInProgress = true;
+        ResizeBegin += (_, _) =>
+        {
+            _resizeDragInProgress = true;
+            _resizeRefreshTimer.Stop();
+        };
         Resize += (_, _) => HandleDeferredResize();
         ResizeEnd += (_, _) =>
         {
@@ -282,10 +293,11 @@ public sealed class MainForm : Form
         StartPosition = FormStartPosition.Manual;
         AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = new Size(MinimumWindowWidth, MinimumWindowHeight);
-        BackColor = Color.FromArgb(243, 246, 248);
+        UiThemePalette.ApplyFormChrome(this);
 
         _rootLayout.Dock = DockStyle.Fill;
         _rootLayout.Padding = new Padding(16, 14, 16, 12);
+        _rootLayout.BackColor = UiThemePalette.WindowBackground;
         _rootLayout.ColumnCount = 1;
         _rootLayout.RowCount = 11;
         _rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -316,6 +328,67 @@ public sealed class MainForm : Form
         BuildSummaryRow();
         BuildContentRow();
         BuildStatusRow();
+    }
+
+    private void ApplyThemeColors()
+    {
+        UiThemePalette.ApplyTreeTheme(this);
+        UiThemePalette.ApplySurface(_headerPanel);
+        UiThemePalette.ApplySurface(_viewModePanel, raised: false);
+        UiThemePalette.ApplySurface(_toolbarPanel, raised: false);
+        UiThemePalette.ApplySurface(_filtersPanel, raised: false);
+        UiThemePalette.ApplySurface(_summaryPanel, raised: false);
+        UiThemePalette.ApplySurface(_contentPanel);
+
+        _scanWarningPanel.BackColor = UiThemePalette.WarningSurface;
+        _resultBannerPanel.BackColor = UiThemePalette.SurfaceRaised;
+        _jobCenterPanel.BackColor = UiThemePalette.SurfaceRaised;
+        _teachingPanel.BackColor = UiThemePalette.AccentSurface;
+
+        _headerTitleLabel.ForeColor = UiThemePalette.TextPrimary;
+        _headerModeLabel.ForeColor = UiThemePalette.TextSecondary;
+        _driveSummaryLabel.ForeColor = UiThemePalette.TextSecondary;
+        _runtimeInfoLabel.ForeColor = UiThemePalette.TextMuted;
+        _scanWarningLabel.ForeColor = UiThemePalette.Warning;
+        _resultBannerLabel.ForeColor = UiThemePalette.TextPrimary;
+        _jobCenterLabel.ForeColor = UiThemePalette.TextPrimary;
+        _jobCenterSummaryLabel.ForeColor = UiThemePalette.TextSecondary;
+        _teachingPrimaryLabel.ForeColor = UiThemePalette.AccentStrong;
+        _teachingSecondaryLabel.ForeColor = UiThemePalette.TextSecondary;
+        _viewSummaryLabel.ForeColor = UiThemePalette.TextPrimary;
+        _selectionSummaryLabel.ForeColor = UiThemePalette.AccentStrong;
+        _selectionHintLabel.ForeColor = UiThemePalette.TextSecondary;
+
+        UiThemePalette.ApplyLinkStyle(_scanWarningLink, warning: true);
+        UiThemePalette.ApplyLinkStyle(_resultBannerLink);
+        UiThemePalette.ApplyLinkStyle(_retryBlockedLink);
+        UiThemePalette.ApplyStatusStripStyle(_statusStrip);
+        UiThemePalette.ApplyDataGridTheme(_grid);
+        UiThemePalette.ApplyDataGridTheme(_overviewGrid);
+        UiThemePalette.ApplyDataGridTheme(_infrequentGrid);
+        UiThemePalette.ApplyTextBoxStyle(_searchTextBox);
+        UiThemePalette.ApplyComboBoxStyle(_categoryComboBox);
+        UiThemePalette.ApplyComboBoxStyle(_modeComboBox);
+        UiThemePalette.ApplyComboBoxStyle(_sortComboBox);
+
+        UiThemePalette.ApplyButtonStyle(_scanButton, primary: false);
+        UiThemePalette.ApplyButtonStyle(_recommendedButton, primary: false);
+        UiThemePalette.ApplyButtonStyle(_cDriveAdviceButton, primary: false);
+        UiThemePalette.ApplyButtonStyle(_cleanSelectedButton, primary: false);
+        UiThemePalette.ApplyButtonStyle(_safeCleanButton, primary: true);
+        UiThemePalette.ApplyButtonStyle(_migrateSelectedButton, primary: true);
+        UiThemePalette.ApplyButtonStyle(_deleteOverviewSelectedButton, primary: false);
+        UiThemePalette.ApplyButtonStyle(_scheduleSettingsButton, primary: false);
+        UiThemePalette.ApplyButtonStyle(_whitelistButton, primary: false);
+        UiThemePalette.ApplyButtonStyle(_moreActionsButton, primary: false);
+
+        _dismissScanWarningButton.BackColor = Color.Transparent;
+        _dismissScanWarningButton.ForeColor = UiThemePalette.Warning;
+        _dismissScanWarningButton.FlatAppearance.BorderSize = 0;
+        _dismissBannerButton.BackColor = Color.Transparent;
+        _dismissBannerButton.ForeColor = UiThemePalette.TextSecondary;
+        _dismissBannerButton.FlatAppearance.BorderSize = 0;
+        UpdateViewModeButtons();
     }
 
     private void BuildHeaderRow()
@@ -505,8 +578,8 @@ public sealed class MainForm : Form
         _jobListFlow.Margin = Padding.Empty;
         layout.Controls.Add(_jobListFlow, 0, 2);
 
-        _jobCenterPanel.Resize += (_, _) => RefreshJobCardWidths();
-        _jobListFlow.Resize += (_, _) => RefreshJobCardWidths();
+        _jobCenterPanel.Resize += (_, _) => HandleJobCardWidthRefreshRequest();
+        _jobListFlow.Resize += (_, _) => HandleJobCardWidthRefreshRequest();
     }
 
     private void BuildViewModeRow()
@@ -1910,6 +1983,12 @@ public sealed class MainForm : Form
             return;
         }
 
+        if (_resizeDragInProgress)
+        {
+            _pendingInfrequentIconColumnRefresh = true;
+            return;
+        }
+
         try
         {
             BeginInvoke(new Action(() =>
@@ -1919,7 +1998,13 @@ public sealed class MainForm : Form
                     return;
                 }
 
-                _infrequentGrid.InvalidateColumn(_infrequentIconColumn.Index);
+                if (_resizeDragInProgress)
+                {
+                    _pendingInfrequentIconColumnRefresh = true;
+                    return;
+                }
+
+                SafeInvalidateIconColumn(_infrequentGrid, _infrequentIconColumn.Index);
             }));
         }
         catch
@@ -1934,6 +2019,12 @@ public sealed class MainForm : Form
             return;
         }
 
+        if (_resizeDragInProgress)
+        {
+            _pendingCleanupIconColumnRefresh = true;
+            return;
+        }
+
         try
         {
             BeginInvoke(new Action(() =>
@@ -1943,7 +2034,13 @@ public sealed class MainForm : Form
                     return;
                 }
 
-                _grid.InvalidateColumn(_cleanupIconColumn.Index);
+                if (_resizeDragInProgress)
+                {
+                    _pendingCleanupIconColumnRefresh = true;
+                    return;
+                }
+
+                SafeInvalidateIconColumn(_grid, _cleanupIconColumn.Index);
             }));
         }
         catch
@@ -1958,6 +2055,12 @@ public sealed class MainForm : Form
             return;
         }
 
+        if (_resizeDragInProgress)
+        {
+            _pendingOverviewIconColumnRefresh = true;
+            return;
+        }
+
         try
         {
             BeginInvoke(new Action(() =>
@@ -1967,7 +2070,13 @@ public sealed class MainForm : Form
                     return;
                 }
 
-                _overviewGrid.InvalidateColumn(_overviewIconColumn.Index);
+                if (_resizeDragInProgress)
+                {
+                    _pendingOverviewIconColumnRefresh = true;
+                    return;
+                }
+
+                SafeInvalidateIconColumn(_overviewGrid, _overviewIconColumn.Index);
             }));
         }
         catch
@@ -3104,22 +3213,54 @@ public sealed class MainForm : Form
             return;
         }
 
-        using var dialog = new ScheduleSettingsDialog(_context, _settingsService, _schedulerService, _settings);
-        if (dialog.ShowDialog(this) != DialogResult.OK || !dialog.SettingsChanged)
+        if (_activeScheduleSettingsDialog is { IsDisposed: false })
         {
-            UpdateScheduleStatus();
+            _activeScheduleSettingsDialog.Activate();
+            _activeScheduleSettingsDialog.BringToFront();
             return;
         }
 
-        _settings = _settingsService.Load();
-        UpdateScheduleStatus();
-        _ = RefreshScanAsync();
+        var dialog = new ScheduleSettingsDialog(_context, _settingsService, _schedulerService, _settings);
+        _activeScheduleSettingsDialog = dialog;
+        dialog.FormClosed += async (_, _) =>
+        {
+            if (ReferenceEquals(_activeScheduleSettingsDialog, dialog))
+            {
+                _activeScheduleSettingsDialog = null;
+            }
+
+            if (!dialog.SettingsChanged)
+            {
+                UpdateScheduleStatus();
+                return;
+            }
+
+            _settings = _settingsService.Load();
+            UpdateScheduleStatus();
+            await RefreshScanAsync();
+        };
+        dialog.Show(this);
     }
 
     private void OpenRegressionAudit()
     {
-        using var dialog = new RegressionAuditDialog(BuildRegressionAuditEntries(), _runtimeInfoLabel.Text);
-        dialog.ShowDialog(this);
+        if (_activeRegressionAuditDialog is { IsDisposed: false })
+        {
+            _activeRegressionAuditDialog.Activate();
+            _activeRegressionAuditDialog.BringToFront();
+            return;
+        }
+
+        var dialog = new RegressionAuditDialog(BuildRegressionAuditEntries(), _runtimeInfoLabel.Text);
+        _activeRegressionAuditDialog = dialog;
+        dialog.FormClosed += (_, _) =>
+        {
+            if (ReferenceEquals(_activeRegressionAuditDialog, dialog))
+            {
+                _activeRegressionAuditDialog = null;
+            }
+        };
+        dialog.Show(this);
     }
 
     private void UpdateRegressionAuditMenuText()
@@ -3283,52 +3424,58 @@ public sealed class MainForm : Form
         ];
     }
 
-    private async Task OpenCDriveAdviceAsync()
+    private Task OpenCDriveAdviceAsync()
     {
+        if (_activeCDriveSuggestionDialog is { IsDisposed: false })
+        {
+            _activeCDriveSuggestionDialog.ApplySnapshot(BuildInitialCDriveAdviceSnapshot());
+            PrimeCDriveAdviceDialogAsync(_activeCDriveSuggestionDialog);
+            _activeCDriveSuggestionDialog.Activate();
+            _activeCDriveSuggestionDialog.BringToFront();
+            return Task.CompletedTask;
+        }
+
         var candidates = _snapshot?.MigrationCandidates ?? [];
-        using var dialog = new CDriveSuggestionDialog(_settings.AppName, candidates, _migrationService, _readOnlyMode);
+        var dialog = new CDriveSuggestionDialog(_settings.AppName, candidates, _migrationService, _readOnlyMode);
         _activeCDriveSuggestionDialog = dialog;
         dialog.ApplySnapshot(BuildInitialCDriveAdviceSnapshot());
         PrimeCDriveAdviceDialogAsync(dialog);
-
-        DialogResult dialogResult;
-        try
-        {
-            dialogResult = dialog.ShowDialog(this);
-        }
-        finally
+        dialog.FormClosed += async (_, _) =>
         {
             if (ReferenceEquals(_activeCDriveSuggestionDialog, dialog))
             {
                 _activeCDriveSuggestionDialog = null;
             }
-        }
 
-        if (dialog.DeleteCandidates.Count > 0)
-        {
-            var cleanupItems = CreateCleanupItemsFromMigrationCandidates(dialog.DeleteCandidates);
-            if (cleanupItems.Count > 0)
+            if (dialog.DeleteCandidates.Count > 0)
             {
-                await StartCleanupFlowAsync(cleanupItems, safeOnly: false);
+                var cleanupItems = CreateCleanupItemsFromMigrationCandidates(dialog.DeleteCandidates);
+                if (cleanupItems.Count > 0)
+                {
+                    await StartCleanupFlowAsync(cleanupItems, safeOnly: false);
+                }
+
+                return;
             }
-            return;
-        }
 
-        if (dialogResult != DialogResult.OK || !dialog.RefreshRequired)
-        {
-            return;
-        }
+            if (!dialog.RefreshRequired)
+            {
+                return;
+            }
 
-        if (!string.IsNullOrWhiteSpace(dialog.ResultLogPath))
-        {
-            _lastResultLogPath = dialog.ResultLogPath;
-        }
+            if (!string.IsNullOrWhiteSpace(dialog.ResultLogPath))
+            {
+                _lastResultLogPath = dialog.ResultLogPath;
+            }
 
-        QueueScanRefresh(userInitiated: false);
-        if (dialog.LastRunResult is not null)
-        {
-            ShowMigrationResultBanner(dialog.LastRunResult);
-        }
+            QueueScanRefresh(userInitiated: false);
+            if (dialog.LastRunResult is not null)
+            {
+                ShowMigrationResultBanner(dialog.LastRunResult);
+            }
+        };
+        dialog.Show(this);
+        return Task.CompletedTask;
     }
 
     private ScanSnapshot BuildInitialCDriveAdviceSnapshot()
@@ -4258,16 +4405,9 @@ public sealed class MainForm : Form
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Margin = new Padding(0, 0, 0, 8),
             Padding = new Padding(10, 10, 10, 10),
-            BackColor = Color.White
+            BackColor = UiThemePalette.SurfaceRaised
         };
-        panel.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(226, 232, 237));
-            var bounds = panel.ClientRectangle;
-            bounds.Width -= 1;
-            bounds.Height -= 1;
-            e.Graphics.DrawRectangle(pen, bounds);
-        };
+        UiThemePalette.AttachBorderPainter(panel);
 
         var layout = new TableLayoutPanel
         {
@@ -4289,7 +4429,7 @@ public sealed class MainForm : Form
         {
             AutoSize = true,
             Font = new Font("Microsoft YaHei UI", 8.8f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(38, 54, 66),
+            ForeColor = UiThemePalette.TextPrimary,
             Margin = new Padding(0, 0, 10, 6)
         };
         layout.Controls.Add(titleLabel, 0, 0);
@@ -4307,7 +4447,7 @@ public sealed class MainForm : Form
         var messageLabel = new Label
         {
             AutoSize = true,
-            ForeColor = Color.FromArgb(82, 95, 107),
+            ForeColor = UiThemePalette.TextSecondary,
             Margin = Padding.Empty
         };
         layout.Controls.Add(messageLabel, 0, 1);
@@ -4318,16 +4458,9 @@ public sealed class MainForm : Form
             Dock = DockStyle.Top,
             Height = 10,
             Margin = new Padding(0, 8, 0, 0),
-            Style = job.IsIndeterminate && job.State == OperationJobState.Running && job.Percent <= 0
-                ? ProgressBarStyle.Marquee
-                : ProgressBarStyle.Continuous
+            Style = ProgressBarStyle.Continuous
         };
-        progressBar.MarqueeAnimationSpeed = 18;
-
-        if (progressBar.Style == ProgressBarStyle.Continuous)
-        {
-            progressBar.Value = Math.Clamp(job.Percent, 0, 100);
-        }
+        progressBar.Value = GetJobProgressBarValue(job);
 
         layout.Controls.Add(progressBar, 0, 2);
         layout.SetColumnSpan(progressBar, 2);
@@ -4346,14 +4479,11 @@ public sealed class MainForm : Form
         binding.ProgressSummaryLabel.ForeColor = GetJobProgressColor(job);
         binding.ProgressSummaryLabel.Text = BuildJobProgressText(job);
         binding.MessageLabel.Text = BuildJobMessage(job);
-        binding.ProgressBar.Style = job.IsIndeterminate && job.State == OperationJobState.Running && job.Percent <= 0
-            ? ProgressBarStyle.Marquee
-            : ProgressBarStyle.Continuous;
-        binding.ProgressBar.MarqueeAnimationSpeed = 18;
-
-        if (binding.ProgressBar.Style == ProgressBarStyle.Continuous)
+        binding.ProgressBar.Style = ProgressBarStyle.Continuous;
+        var displayPercent = GetJobProgressBarValue(job);
+        if (binding.ProgressBar.Value != displayPercent)
         {
-            binding.ProgressBar.Value = Math.Clamp(job.Percent, 0, 100);
+            binding.ProgressBar.Value = displayPercent;
         }
 
         ApplyJobCardLayout(binding);
@@ -4366,6 +4496,16 @@ public sealed class MainForm : Form
         {
             ApplyJobCardLayout(binding);
         }
+    }
+
+    private static int GetJobProgressBarValue(OperationJob job)
+    {
+        if (job.Percent > 0)
+        {
+            return Math.Clamp(job.Percent, 0, 100);
+        }
+
+        return job.IsIndeterminate && job.State == OperationJobState.Running ? 8 : 0;
     }
 
     private int GetJobCardWidth()
@@ -4607,12 +4747,22 @@ public sealed class MainForm : Form
 
         _pendingResizeForceLayout = _pendingResizeForceLayout || _layoutDensityMode != ResolveLayoutDensityMode();
         _resizeRefreshPending = true;
+        if (_resizeDragInProgress)
+        {
+            return;
+        }
+
         _resizeRefreshTimer.Stop();
         _resizeRefreshTimer.Start();
     }
 
     private void FlushDeferredResizeRefresh(bool forceLayout = false)
     {
+        if (_resizeDragInProgress && !forceLayout)
+        {
+            return;
+        }
+
         _resizeRefreshTimer.Stop();
         if (!_resizeRefreshPending && !forceLayout)
         {
@@ -4622,7 +4772,67 @@ public sealed class MainForm : Form
         var needsLayoutRefresh = forceLayout || _pendingResizeForceLayout || _layoutDensityMode != ResolveLayoutDensityMode();
         _resizeRefreshPending = false;
         _pendingResizeForceLayout = false;
-        RefreshScaledUi(forceLayout: needsLayoutRefresh, refreshGridContent: !_resizeDragInProgress);
+        RefreshScaledUi(forceLayout: needsLayoutRefresh, refreshGridContent: !_resizeDragInProgress || forceLayout);
+        FlushPendingVisualRefreshes();
+    }
+
+    private void HandleJobCardWidthRefreshRequest()
+    {
+        if (_resizeDragInProgress)
+        {
+            _pendingJobCardWidthRefresh = true;
+            return;
+        }
+
+        RefreshJobCardWidths();
+    }
+
+    private void FlushPendingVisualRefreshes()
+    {
+        if (_pendingJobCardWidthRefresh)
+        {
+            _pendingJobCardWidthRefresh = false;
+            RefreshJobCardWidths();
+        }
+
+        FlushPendingIconColumnInvalidations();
+    }
+
+    private void FlushPendingIconColumnInvalidations()
+    {
+        if (_pendingCleanupIconColumnRefresh)
+        {
+            _pendingCleanupIconColumnRefresh = false;
+            SafeInvalidateIconColumn(_grid, _cleanupIconColumn.Index);
+        }
+
+        if (_pendingOverviewIconColumnRefresh)
+        {
+            _pendingOverviewIconColumnRefresh = false;
+            SafeInvalidateIconColumn(_overviewGrid, _overviewIconColumn.Index);
+        }
+
+        if (_pendingInfrequentIconColumnRefresh)
+        {
+            _pendingInfrequentIconColumnRefresh = false;
+            SafeInvalidateIconColumn(_infrequentGrid, _infrequentIconColumn.Index);
+        }
+    }
+
+    private void SafeInvalidateIconColumn(DataGridView grid, int columnIndex)
+    {
+        if (IsDisposed || !IsHandleCreated || grid.IsDisposed || columnIndex < 0)
+        {
+            return;
+        }
+
+        try
+        {
+            grid.InvalidateColumn(columnIndex);
+        }
+        catch
+        {
+        }
     }
 
     private static string BuildCompactDriveSummaryText(string fullText)
@@ -4806,10 +5016,10 @@ public sealed class MainForm : Form
     {
         return job.State switch
         {
-            OperationJobState.Failed => Color.FromArgb(160, 53, 53),
-            OperationJobState.Canceled => Color.FromArgb(143, 92, 17),
-            OperationJobState.Succeeded when job.HasWarnings => Color.FromArgb(143, 92, 17),
-            _ => Color.FromArgb(49, 94, 78)
+            OperationJobState.Failed => UiThemePalette.Danger,
+            OperationJobState.Canceled => UiThemePalette.Warning,
+            OperationJobState.Succeeded when job.HasWarnings => UiThemePalette.Warning,
+            _ => UiThemePalette.AccentStrong
         };
     }
 
@@ -5228,9 +5438,9 @@ public sealed class MainForm : Form
 
         if (column.DataPropertyName == nameof(CDriveOverviewEntry.Selected) && !entry.SelectionEnabled)
         {
-            e.CellStyle.BackColor = Color.FromArgb(246, 247, 249);
-            e.CellStyle.SelectionBackColor = Color.FromArgb(246, 247, 249);
-            e.CellStyle.SelectionForeColor = Color.FromArgb(160, 168, 176);
+            e.CellStyle.BackColor = UiThemePalette.SurfaceMuted;
+            e.CellStyle.SelectionBackColor = UiThemePalette.SurfaceMuted;
+            e.CellStyle.SelectionForeColor = UiThemePalette.DisabledText;
         }
     }
 
@@ -5278,9 +5488,9 @@ public sealed class MainForm : Form
 
         if (column.DataPropertyName == nameof(InfrequentSoftwareEntry.Selected) && (entry.IsProtected || entry.IsWhitelisted || !entry.CanDeepDelete))
         {
-            e.CellStyle.BackColor = Color.FromArgb(246, 247, 249);
-            e.CellStyle.SelectionBackColor = Color.FromArgb(246, 247, 249);
-            e.CellStyle.SelectionForeColor = Color.FromArgb(160, 168, 176);
+            e.CellStyle.BackColor = UiThemePalette.SurfaceMuted;
+            e.CellStyle.SelectionBackColor = UiThemePalette.SurfaceMuted;
+            e.CellStyle.SelectionForeColor = UiThemePalette.DisabledText;
         }
     }
 
@@ -5554,19 +5764,10 @@ public sealed class MainForm : Form
         var panel = new Panel
         {
             Dock = DockStyle.Top,
-            BackColor = Color.White,
+            BackColor = UiThemePalette.SurfaceRaised,
             Margin = Padding.Empty
         };
-
-        panel.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(226, 232, 237));
-            var bounds = panel.ClientRectangle;
-            bounds.Width -= 1;
-            bounds.Height -= 1;
-            e.Graphics.DrawRectangle(pen, bounds);
-        };
-
+        UiThemePalette.AttachBorderPainter(panel);
         return panel;
     }
 
@@ -5722,11 +5923,7 @@ public sealed class MainForm : Form
         ApplyActionButtonSizing(button, text, minimumWidth);
         button.Margin = new Padding(0, 0, 10, 0);
         button.TextAlign = ContentAlignment.MiddleCenter;
-        button.FlatStyle = FlatStyle.Flat;
-        button.BackColor = primary ? Color.FromArgb(31, 166, 124) : Color.White;
-        button.ForeColor = primary ? Color.White : Color.FromArgb(37, 54, 68);
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = primary ? Color.FromArgb(31, 166, 124) : Color.FromArgb(214, 221, 228);
+        UiThemePalette.ApplyButtonStyle(button, primary);
     }
 
     private static void ApplyActionButtonSizing(Button button, string text, int minimumWidth, bool dense = false, bool ultraDense = false)
@@ -5744,7 +5941,7 @@ public sealed class MainForm : Form
     {
         label.AutoSize = true;
         label.Anchor = AnchorStyles.Left;
-        label.ForeColor = Color.FromArgb(74, 85, 96);
+        label.ForeColor = UiThemePalette.TextSecondary;
         label.Margin = new Padding(0, 6, 8, 0);
         label.Text = text;
     }
@@ -5755,7 +5952,7 @@ public sealed class MainForm : Form
         {
             AutoSize = true,
             Anchor = AnchorStyles.Left,
-            ForeColor = Color.FromArgb(74, 85, 96),
+            ForeColor = UiThemePalette.TextSecondary,
             Margin = new Padding(0, 6, 8, 0),
             Text = text
         };
@@ -5766,6 +5963,7 @@ public sealed class MainForm : Form
         comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
         comboBox.Width = width;
         comboBox.Margin = new Padding(0, 0, 16, 0);
+        UiThemePalette.ApplyComboBoxStyle(comboBox);
     }
 
     private static void ApplyComboBoxSizing(ComboBox comboBox, int minimumWidth, int horizontalPadding)
@@ -5814,10 +6012,7 @@ public sealed class MainForm : Form
 
     private static void ApplyPillStyle(Button button, bool selected, bool compact = false)
     {
-        button.BackColor = selected ? Color.FromArgb(31, 166, 124) : Color.FromArgb(247, 249, 250);
-        button.ForeColor = selected ? Color.White : Color.FromArgb(53, 67, 78);
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = selected ? Color.FromArgb(31, 166, 124) : Color.FromArgb(217, 223, 228);
+        UiThemePalette.ApplyPillButtonStyle(button, selected);
         if (compact)
         {
             var targetStyle = selected ? FontStyle.Bold : FontStyle.Regular;

@@ -58,6 +58,33 @@
 
 ## 已完成源码修改
 
+### 2026-04-24 下一轮收口第一轮代码落地
+- 范围：
+  - `Forms/OperationProgressDialog.cs`
+  - `Forms/MainForm.cs`
+  - `Forms/CDriveSuggestionDialog.cs`
+  - `Forms/ScheduleSettingsDialog.cs`
+  - `Forms/RegressionAuditDialog.cs`
+  - `Forms/CleanupConfirmationDialog.cs`
+  - `Forms/DeploymentDialog.cs`
+  - `Forms/ElevationPromptDialog.cs`
+  - `Services/OperationManager.cs`
+  - `Infrastructure/ApplicationIconCache.cs`
+  - `Infrastructure/UiThemePalette.cs`
+- 已做：
+  - 进度窗与主窗后台任务卡移除 `Marquee`
+  - 进度窗去掉每次上报后的整窗 `Refresh()`
+  - 后台任务状态发布增加节流与内容去重
+  - 主窗缩放改成拖动时轻量、稳定后批量刷新
+  - 主窗与 `C盘建议` 的图标列刷新与缩放过程解耦
+  - `C盘建议`、自动清理设置、历史问题清单改成单实例非模态工作窗口
+  - 引入统一暗黑主题令牌并覆盖主窗与主要对话框
+  - 应用图标 fallback 改为官方主图标兜底并支持尺寸感知
+- 状态：
+  - 已完成代码修改、编译通过、安装版已同步
+- 结果：
+  - 代码层主要收口已落地，但仍需要用户在真实界面上继续验收“体感是否达标”
+
 ### 2026-04-23 第一轮
 - 范围：
   - `Forms/MainForm.cs`
@@ -127,19 +154,19 @@
   - 下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
 - 当前进度：
   - GitHub 持久记忆基座已完成
-  - 已确认进度闪动和缩放卡顿的直接代码根因
-  - 即将开始修改进度反馈、缩放刷新、主题和图标
+  - 已完成第一轮代码落地、编译和安装版同步
+  - 发布时再次抓到“旧进程占用安装版 EXE”问题
 - 当前未完成：
-  - 进度区整块闪动仍存在
-  - 缩放卡顿 / 变形仍存在
-  - 纯黑主题仍未落地
-  - 图标 fallback 仍不够清晰
-  - 启动体感仍需继续压缩
+  - 进度区是否完全不再闪动，仍需实机验收
+  - 缩放卡顿 / 变形是否达标，仍需实机验收
+  - 纯黑主题是否还有浅色残留，仍需逐窗验收
+  - 图标 fallback 是否还有糊点框感，仍需实机验收
+  - 启动体感与小窗数据区仍需继续优化
   - 主窗口顶部区仍然过高
   - 小窗口数据区仍然不够大
 - 下一步精确落点：
-  - 先完成本轮 Start checkpoint
-  - 然后先改 `Forms/OperationProgressDialog.cs`、`Forms/MainForm.cs`、`Services/OperationManager.cs`
+  - 先写本轮 Progress checkpoint 并推送 GitHub
+  - 然后继续回到主窗口小窗数据区 / 顶部区占高 / 退出进程残留这三项
 
 ## 尚未开始的源码方案
 - 退出后进程残留的专项收口
@@ -156,6 +183,6 @@
 ## 发布状态
 - 最近一次已知安装版时间戳：
   - `D:\磁盘清理器\磁盘清理器.exe`
-  - `2026-04-23 02:47:53`
+  - `2026-04-24 22:32:15`
 - 当前 GitHub 私有仓库：
   - `https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`

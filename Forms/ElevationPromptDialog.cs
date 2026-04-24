@@ -1,3 +1,5 @@
+using PortableCDriveCleaner.Infrastructure;
+
 namespace PortableCDriveCleaner.Forms;
 
 public sealed class ElevationPromptDialog : Form
@@ -22,14 +24,15 @@ public sealed class ElevationPromptDialog : Form
         ShowInTaskbar = false;
         MinimumSize = new Size(760, 360);
         ClientSize = new Size(780, 380);
-        BackColor = Color.FromArgb(243, 246, 248);
+        UiThemePalette.ApplyFormChrome(this);
 
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 3,
-            Padding = new Padding(20, 18, 20, 18)
+            Padding = new Padding(20, 18, 20, 18),
+            BackColor = UiThemePalette.WindowBackground
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -47,17 +50,10 @@ public sealed class ElevationPromptDialog : Form
         }, 0, 0);
 
         _messageCard.Dock = DockStyle.Fill;
-        _messageCard.BackColor = Color.White;
+        _messageCard.BackColor = UiThemePalette.SurfaceRaised;
         _messageCard.Padding = new Padding(18, 16, 18, 16);
         _messageCard.Margin = Padding.Empty;
-        _messageCard.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(226, 232, 237));
-            var bounds = _messageCard.ClientRectangle;
-            bounds.Width -= 1;
-            bounds.Height -= 1;
-            e.Graphics.DrawRectangle(pen, bounds);
-        };
+        UiThemePalette.AttachBorderPainter(_messageCard);
         root.Controls.Add(_messageCard, 0, 1);
 
         _messageLabel.AutoSize = true;
@@ -117,6 +113,7 @@ public sealed class ElevationPromptDialog : Form
             UiScaleHelper.RefreshRegisteredButtonSizing(this);
             UpdateResponsiveLayout();
         }));
+        UiThemePalette.ApplyTreeTheme(this);
     }
 
     private static Button CreateFooterButton(string text, bool primary)
@@ -125,13 +122,9 @@ public sealed class ElevationPromptDialog : Form
         {
             Margin = new Padding(10, 0, 0, 0),
             Padding = new Padding(16, 0, 16, 0),
-            Text = text,
-            FlatStyle = FlatStyle.Flat,
-            BackColor = primary ? Color.FromArgb(31, 166, 124) : Color.White,
-            ForeColor = primary ? Color.White : Color.FromArgb(37, 54, 68)
+            Text = text
         };
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = primary ? Color.FromArgb(31, 166, 124) : Color.FromArgb(214, 221, 228);
+        UiThemePalette.ApplyButtonStyle(button, primary);
         UiScaleHelper.RegisterButtonSizing(button, text, 112, 42, minHeight: 42, verticalPadding: 18);
         return button;
     }

@@ -1,3 +1,4 @@
+using PortableCDriveCleaner.Infrastructure;
 using PortableCDriveCleaner.Models;
 using PortableCDriveCleaner.Services;
 
@@ -41,7 +42,7 @@ public sealed class DeploymentDialog : Form
         ShowInTaskbar = false;
         MinimumSize = new Size(MinimumDialogWidth, MinimumDialogHeight);
         ClientSize = new Size(DefaultDialogWidth, DefaultDialogHeight);
-        BackColor = Color.FromArgb(243, 246, 248);
+        UiThemePalette.ApplyFormChrome(this);
 
         BuildUi(heading, introText, defaultCreateShortcut, allowDataMigration);
         Resize += (_, _) => UpdateResponsiveLayout();
@@ -68,7 +69,8 @@ public sealed class DeploymentDialog : Form
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 3,
-            Padding = new Padding(20, 18, 20, 18)
+            Padding = new Padding(20, 18, 20, 18),
+            BackColor = UiThemePalette.WindowBackground
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -88,23 +90,16 @@ public sealed class DeploymentDialog : Form
         var card = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.White,
+            BackColor = UiThemePalette.SurfaceRaised,
             Padding = new Padding(0),
             Margin = Padding.Empty
         };
-        card.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(226, 232, 237));
-            var bounds = card.ClientRectangle;
-            bounds.Width -= 1;
-            bounds.Height -= 1;
-            e.Graphics.DrawRectangle(pen, bounds);
-        };
+        UiThemePalette.AttachBorderPainter(card);
         root.Controls.Add(card, 0, 1);
 
         _scrollHost.Dock = DockStyle.Fill;
         _scrollHost.Padding = new Padding(18, 16, 18, 16);
-        _scrollHost.BackColor = Color.White;
+        _scrollHost.BackColor = UiThemePalette.SurfaceRaised;
         _scrollHost.Margin = Padding.Empty;
         card.Controls.Add(_scrollHost);
 
@@ -206,6 +201,7 @@ public sealed class DeploymentDialog : Form
         confirmButton.Click += (_, _) => Confirm();
         footer.Controls.Add(confirmButton);
         AcceptButton = confirmButton;
+        UiThemePalette.ApplyTreeTheme(this);
     }
 
     private void LoadTargets()
@@ -308,13 +304,9 @@ public sealed class DeploymentDialog : Form
         {
             Margin = new Padding(10, 0, 0, 0),
             Padding = new Padding(16, 0, 16, 0),
-            Text = text,
-            FlatStyle = FlatStyle.Flat,
-            BackColor = primary ? Color.FromArgb(31, 166, 124) : Color.White,
-            ForeColor = primary ? Color.White : Color.FromArgb(37, 54, 68)
+            Text = text
         };
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = primary ? Color.FromArgb(31, 166, 124) : Color.FromArgb(214, 221, 228);
+        UiThemePalette.ApplyButtonStyle(button, primary);
         UiScaleHelper.RegisterButtonSizing(button, text, 110, 42, minHeight: 42, verticalPadding: 18);
         return button;
     }

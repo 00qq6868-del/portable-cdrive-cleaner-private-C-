@@ -5,6 +5,8 @@ namespace PortableCDriveCleaner.Services;
 
 public sealed class OperationManager
 {
+    private static readonly TimeSpan ProgressPublishInterval = TimeSpan.FromMilliseconds(220);
+
     private readonly SemaphoreSlim _concurrencyGate;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _resourceLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _sync = new();
@@ -150,6 +152,7 @@ public sealed class OperationManager
             job.IsIndeterminate = true;
             job.Percent = Math.Max(job.Percent, 1);
             job.JobScope = string.IsNullOrWhiteSpace(job.JobScope) ? job.Title : job.JobScope;
+            NotePublishedProgress_NoLock(job);
         }
 
         PublishState();
@@ -157,6 +160,7 @@ public sealed class OperationManager
 
     private void UpdateProgress(MutableJob job, OperationProgress update)
     {
+        var shouldPublish = false;
         lock (_sync)
         {
             job.Phase = string.IsNullOrWhiteSpace(update.Phase) ? job.Phase : update.Phase;
@@ -166,9 +170,17 @@ public sealed class OperationManager
             job.ProcessedBytes = update.ProcessedBytes;
             job.TotalBytes = update.TotalBytes;
             job.JobScope = string.IsNullOrWhiteSpace(update.JobScope) ? job.JobScope : update.JobScope;
+            shouldPublish = ShouldPublishProgress_NoLock(job);
+            if (shouldPublish)
+            {
+                NotePublishedProgress_NoLock(job);
+            }
         }
 
-        PublishState();
+        if (shouldPublish)
+        {
+            PublishState();
+        }
     }
 
     private void MarkCompleted(MutableJob job, OperationJobState state, string summary, int warningCount = 0, string warningSummary = "")
@@ -186,6 +198,7 @@ public sealed class OperationManager
             job.Percent = 100;
             job.IsIndeterminate = false;
             TrimCompletedJobs_NoLock();
+            NotePublishedProgress_NoLock(job);
         }
     }
 
@@ -201,6 +214,7 @@ public sealed class OperationManager
             job.ErrorMessage = job.Message;
             job.IsIndeterminate = false;
             TrimCompletedJobs_NoLock();
+            NotePublishedProgress_NoLock(job);
         }
     }
 
@@ -221,6 +235,55 @@ public sealed class OperationManager
     private void PublishState()
     {
         StateChanged?.Invoke(this, GetState());
+    }
+
+    private static bool ShouldPublishProgress_NoLock(MutableJob job)
+    {
+        var signature = BuildProgressSignature(job);
+        if (string.Equals(signature, job.LastPublishedSignature, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var now = DateTime.UtcNow;
+        var majorChange = job.Percent != job.LastPublishedPercent
+            || job.IsIndeterminate != job.LastPublishedIsIndeterminate
+            || !string.Equals(job.Phase, job.LastPublishedPhase, StringComparison.Ordinal)
+            || !string.Equals(job.Message, job.LastPublishedMessage, StringComparison.Ordinal)
+            || job.State != job.LastPublishedState;
+
+        return majorChange || now - job.LastPublishedAtUtc >= ProgressPublishInterval;
+    }
+
+    private static void NotePublishedProgress_NoLock(MutableJob job)
+    {
+        job.LastPublishedAtUtc = DateTime.UtcNow;
+        job.LastPublishedState = job.State;
+        job.LastPublishedPercent = job.Percent;
+        job.LastPublishedIsIndeterminate = job.IsIndeterminate;
+        job.LastPublishedPhase = job.Phase;
+        job.LastPublishedMessage = job.Message;
+        job.LastPublishedSignature = BuildProgressSignature(job);
+    }
+
+    private static string BuildProgressSignature(MutableJob job)
+    {
+        var processedBucket = job.ProcessedBytes.HasValue
+            ? job.ProcessedBytes.Value / (4L * 1024L * 1024L)
+            : -1L;
+        var totalBucket = job.TotalBytes.HasValue
+            ? job.TotalBytes.Value / (4L * 1024L * 1024L)
+            : -1L;
+
+        return string.Join('|',
+            job.State,
+            job.Percent,
+            job.IsIndeterminate ? 1 : 0,
+            processedBucket,
+            totalBucket,
+            job.Phase,
+            job.Message,
+            job.JobScope);
     }
 
     private sealed class MutableJob
@@ -244,6 +307,13 @@ public sealed class OperationManager
         public bool HasWarnings { get; set; }
         public int WarningCount { get; set; }
         public string WarningSummary { get; set; } = string.Empty;
+        public DateTime LastPublishedAtUtc { get; set; }
+        public OperationJobState LastPublishedState { get; set; }
+        public int LastPublishedPercent { get; set; }
+        public bool LastPublishedIsIndeterminate { get; set; }
+        public string LastPublishedPhase { get; set; } = string.Empty;
+        public string LastPublishedMessage { get; set; } = string.Empty;
+        public string LastPublishedSignature { get; set; } = string.Empty;
 
         public OperationJob ToSnapshot()
         {
