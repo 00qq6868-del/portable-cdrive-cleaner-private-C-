@@ -40,7 +40,8 @@
 - 当前安装版路径：`D:\磁盘清理器\磁盘清理器.exe`
 - 当前项目还没有 GitHub CLI
 - 当前项目已经初始化本地 Git 仓库
-- 当前 GitHub 私有远程还未配置
+- 当前 GitHub 私有远程已配置并已完成首次推送
+- 当前远程仓库：`origin -> portable-cdrive-cleaner-private-C-`
 
 ## 使用规则
 - 每次开始新任务前，先更新 `CURRENT_TASK.md`

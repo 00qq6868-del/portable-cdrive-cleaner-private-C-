@@ -8,7 +8,8 @@
 - 项目根目录已经有记忆/交接文档
 - 项目已经初始化本地 Git 仓库
 - 当前没有 GitHub CLI
-- 当前还没有确认远程私有仓库
+- 当前 GitHub 私有远程已经接通
+- 默认远程分支：`main`
 
 ## 一次性准备
 
@@ -35,6 +36,8 @@ git remote add origin YOUR_REPO_URL
 git branch -M main
 git push -u origin main
 ```
+
+> 当前项目已完成这一步；后续主要使用“保存当前进度到GitHub”即可。
 
 ## 每次开始新任务前
 1. 先更新 `CURRENT_TASK.md`
@@ -73,14 +76,13 @@ git push origin main
 powershell -ExecutionPolicy Bypass -File .\tools\Save-Handoff.ps1 -Message "docs: save handoff before interruption" -Push
 ```
 
-如果这次还不想提交代码，只想先提交文档，用默认命令即可。
-
-如果这次代码和文档都要一起保存：
+默认建议直接保存“代码 + 文档”：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\Save-Handoff.ps1 -Message "checkpoint: save docs and code progress" -IncludeCode -Push
 ```
 
-## 如果这次还没接通 GitHub
-- 至少先把文档写到本地项目目录
-- 下一个 AI 仍然可以从这些文件继续
+## 当前推荐
+- 平时直接双击桌面：
+  - `保存当前进度到GitHub.cmd`
+- 这样会把当前代码和文档一起提交并推送
