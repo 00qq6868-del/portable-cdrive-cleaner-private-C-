@@ -367,3 +367,41 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-24 23:32:49
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
+- 检查点模式：Progress
+- 已完成：
+  - 代码提交与文档状态已对齐：第二轮 UI 收口代码已以 commit afdca7f 推送到 main，当前安装版为 D:\磁盘清理器\磁盘清理器.exe（2026-04-24 23:28:16）；下一步继续以真实界面验收闪动、缩放、图标清晰度、小窗数据区与暗黑风格。
+- 修改文件：
+- Forms/ThemedButton.cs
+- Forms/ThemedProgressBar.cs
+- Forms/OperationProgressDialog.cs
+- Forms/MainForm.cs
+- Forms/CDriveSuggestionDialog.cs
+- Forms/ScheduleSettingsDialog.cs
+- Forms/RegressionAuditDialog.cs
+- Forms/CleanupConfirmationDialog.cs
+- Forms/DeploymentDialog.cs
+- Forms/ElevationPromptDialog.cs
+- Forms/UiScaleHelper.cs
+- Infrastructure/ApplicationIconCache.cs
+- Infrastructure/UiThemePalette.cs
+- Services/OperationManager.cs
+- CURRENT_TASK.md
+- TODO_NOT_FIXED.md
+- SOURCE_CHANGE_LEDGER.md
+- AI_STATE.json
+- INTERRUPTED_PROGRESS.md
+- OPTIMIZATION_LOG.md
+- 剩余项：
+- 进度区是否完全不再闪动，仍需安装版实机验收
+- 主窗口缩放卡顿
+- 检查点文件：
+  - checkpoints/2026-04-24_233249_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
