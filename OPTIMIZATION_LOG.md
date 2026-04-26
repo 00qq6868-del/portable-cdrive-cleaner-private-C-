@@ -498,3 +498,44 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-27 01:37:09
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：图标高清显示与缩放清晰度专项验收
+- 检查点模式：Progress
+- 已完成：
+  - 已新增并跑通从安装开始的图标清晰度三轮 QA 脚本 tools/Run-Icon-Clarity-QA.ps1。真实安装路径 D:\磁盘清理器\磁盘清理器.exe 已完成 3 轮完整测试，当前机器 DPI 为 168（175%），三轮启动耗时 2.25s / 1.95s / 2.31s，三轮均正常关闭且无残留进程。最新证据目录为 artifacts/icon-qa/2026-04-27_012521。注意：自动化流程已通过，但图标是否达到桌面快捷方式级清晰度仍需结合截图做人眼验收，暂不宣称已修复完成。
+- 修改文件：
+- .gitignore
+- tools/Run-Icon-Clarity-QA.ps1
+- artifacts/icon-qa/2026-04-27_012521/environment.json
+- artifacts/icon-qa/2026-04-27_012521/summary.json
+- artifacts/icon-qa/2026-04-27_012521/cycle-01/01-launch.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-01/02-large.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-01/03-small.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-01/result.json
+- artifacts/icon-qa/2026-04-27_012521/cycle-02/01-launch.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-02/02-large.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-02/03-small.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-02/result.json
+- artifacts/icon-qa/2026-04-27_012521/cycle-03/01-launch.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-03/02-large.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-03/03-small.png
+- artifacts/icon-qa/2026-04-27_012521/cycle-03/result.json
+- CURRENT_TASK.md
+- SOURCE_CHANGE_LEDGER.md
+- TODO_NOT_FIXED.md
+- AI_STATE.json
+- INTERRUPTED_PROGRESS.md
+- OPTIMIZATION_LOG.md
+- 剩余项：
+- 图标是否已达到桌面快捷方式级清晰度仍未通过人眼验收
+- 内部列表图标语义与清晰度仍需结合用户截图继续收口
+- 100%
+- 检查点文件：
+  - checkpoints/2026-04-27_013709_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA

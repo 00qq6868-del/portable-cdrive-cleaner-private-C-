@@ -2,7 +2,9 @@ bin/
 obj/
 dist/
 publish/
-artifacts/
+artifacts/*
+!artifacts/icon-qa/
+!artifacts/icon-qa/**
 tempbuild/
 tempbuild-r0/
 tempbuild-r1/
@@ -11,4 +13,3 @@ tempbuild-r2/
 *.suo
 *.cache
 *.log
-
