@@ -427,3 +427,38 @@
   - 跨 AI / 跨窗口继续时，状态文件现在能完整保留“已完成、未完成、下一步”的真实情况
 - 风险 / 备注：
   - 后续继续用 checkpoint 脚本时，仍需留意命令行传参不要把剩余项截断
+
+## 2026-04-26 23:46:34
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：下一轮收口：缩放止血 + 图标语义修正 + DPI 图标桶 + 纯黑主题收口
+- 检查点模式：Start
+- 已完成：
+  - 开始本轮代码收口：先修 MainForm 缩放重绘链，再修文件夹图标误用和高清图标缓存，随后收口主题与资源脚本。
+- 修改文件：
+- Forms/MainForm.cs
+- Forms/CDriveSuggestionDialog.cs
+- Infrastructure/ApplicationIconCache.cs
+- Infrastructure/IconSemanticResolver.cs
+- Infrastructure/UiThemePalette.cs
+- tools/Build-AppIcon.ps1
+- CURRENT_TASK.md
+- SOURCE_CHANGE_LEDGER.md
+- TODO_NOT_FIXED.md
+- AI_STATE.json
+- INTERRUPTED_PROGRESS.md
+- OPTIMIZATION_LOG.md
+- 剩余项：
+- 主窗口缩放卡顿/变形未结案
+- 小窗口数据区仍然太少
+- 文件夹图标误用未结案
+- 图标高清度未达标
+- 纯黑科技感未达标
+- 启动速度仍未达到秒开感
+- 退出进程残留未结案
+- 检查点文件：
+  - checkpoints/2026-04-26_234634_start.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
