@@ -539,3 +539,27 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-27 01:43:12
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：图标高清显示与缩放清晰度专项收口第二轮
+- 检查点模式：Start
+- 已完成：
+  - 开始本轮图标清晰度专项收口：先修 ApplicationIconCache 的图标提取链，再去掉 MainForm 与 CDriveSuggestionDialog 中 DataGridViewImageColumn.Zoom 的二次缩放，修改后必须重新发布安装版并完成 3 轮完整 QA。
+- 修改文件：
+- 'SOURCE_CHANGE_LEDGER.md'
+- 'CURRENT_TASK.md'
+- 'INTERRUPTED_PROGRESS.md'
+- 'OPTIMIZATION_LOG.md'
+- 'AI_STATE.json'
+- 剩余项：
+- '图标是否达到桌面快捷方式级清晰度仍未通过人眼验收'
+- '内部列表图标与桌面快捷方式图标仍有清晰度差距'
+- '需要在代码修改后重新发布安装版并完成
+- 检查点文件：
+  - checkpoints/2026-04-27_014312_start.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA

@@ -23,42 +23,29 @@
 ## 本轮准备修改
 
 ### 任务
-- 落地“去闪动、缩放不卡、纯黑科技感、高清官方兜底图标、秒开感与跨 AI 持续记忆”第二轮代码收口
+- 图标高清显示与缩放清晰度专项收口第二轮
 
 ### 目标
-- 去掉整块闪动，只保留绿色填充增长、百分比变化和倒计时变化
-- 用自绘深色进度条和自绘深色按钮替换关键原生控件
-- 收口主窗口缩放期间的高频重排、图标列刷新和任务卡宽度抖动
-- 提升标题栏与主要界面的纯黑高级感，修复深色下按钮文字消失/发黑
-- 把列表 fallback 图标换成更清晰的 Windows 官方 stock icon / 关联图标兜底
-- 把本轮状态持续写回 GitHub 持久记忆，并去掉重复噪音记录但保留关键进度
+- 把 `ApplicationIconCache` 从 `ExtractAssociatedIcon` 主链路升级为更接近桌面快捷方式质量的 Shell / 精确尺寸提取链
+- 去掉主窗口和 `C盘建议` 里 `DataGridViewImageColumn.Zoom` 带来的二次缩放发糊
+- 让列表图标尽量按目标尺寸直接输出，再以居中方式显示，而不是运行时再次拉伸
+- 保留自动化三轮 QA，并在每次代码修改后重新发布安装版再跑 3 轮完整流程
+- 把本轮开始、进行中、完成或中断状态持续写回 GitHub 持久记忆
 
 ### 计划涉及文件
-- `Forms/ThemedProgressBar.cs`
-- `Forms/ThemedButton.cs`
-- `Forms/OperationProgressDialog.cs`
 - `Forms/MainForm.cs`
 - `Forms/CDriveSuggestionDialog.cs`
-- `Forms/ScheduleSettingsDialog.cs`
-- `Forms/RegressionAuditDialog.cs`
-- `Forms/CleanupConfirmationDialog.cs`
-- `Forms/DeploymentDialog.cs`
-- `Forms/ElevationPromptDialog.cs`
-- `Services/OperationManager.cs`
 - `Infrastructure/ApplicationIconCache.cs`
-- `Infrastructure/UiThemePalette.cs`
-- `MEMORY.md`
 - `CURRENT_TASK.md`
-- `TODO_NOT_FIXED.md`
+- `INTERRUPTED_PROGRESS.md`
+- `OPTIMIZATION_LOG.md`
 - `AI_STATE.json`
 
 ### 预期动作
-- 新增静态自绘进度条控件
-- 新增自绘深色按钮控件，保证禁用态文字可读
-- 去掉后台任务卡每次状态变化都整卡重排的行为
-- 把缩放过程改成更轻的尺寸记录，稳定后再合并刷新
-- 给图标兜底改成更清晰的 Shell / 官方图标策略
-- 持续把开始/进行中/完成/中断状态写回 GitHub
+- 为 EXE / ICO / 普通文件分别走更合适的图标提取路径
+- 优先请求与当前 DPI 桶匹配的图标尺寸，减少运行期重采样
+- 主表和建议表的图标列改成不再 `Zoom`
+- 继续把开始/进行中/完成/中断状态写回 GitHub
 
 ## 已完成源码修改
 
@@ -242,23 +229,19 @@
 
 ### 当前正在做
 - 任务：
-  - 下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
+  - 图标高清显示与缩放清晰度专项收口第二轮
 - 当前进度：
   - GitHub 持久记忆基座已完成
-  - 已完成第二轮代码落地、编译和安装版同步
-  - 发布时再次抓到“旧进程占用安装版 EXE”问题
+  - 已完成三轮自动化 QA 脚本和真实安装路径实跑
+  - 已确认最可疑残留链路是 `ExtractAssociatedIcon` 与 `DataGridViewImageColumn.Zoom`
 - 当前未完成：
-  - 进度区是否完全不再闪动，仍需实机验收
-  - 缩放卡顿 / 变形是否已被这轮冻结布局彻底压住，仍需实机验收
-  - 文件夹图标误用是否已在真实列表中完全消失，仍需实机验收
   - 图标清晰度是否已随 DPI 图标桶显著改善，仍需实机验收
-  - 纯黑主题是否还有浅色残留，仍需逐窗验收
-  - 启动体感与小窗数据区仍需继续优化
-  - 主窗口顶部区仍然可能偏高
-  - 小窗口数据区仍然可能不够大
+  - 内部列表图标是否已达到桌面快捷方式级清晰度，仍需人眼验收
+  - 图标误用与通用 fallback 是否仍然显得过糊、过泛，仍需人眼验收
 - 下一步精确落点：
-  - 先写本轮 Progress checkpoint 并推送 GitHub
-  - 然后用最新安装版回到“仍闪 / 仍卡 / 图标仍糊 / 顶部仍高 / 小窗数据仍少 / 退出进程残留”继续逐项收口
+  - 先把本轮“图标提取链 + 表格二次缩放链”写回 checkpoint
+  - 然后修改 `Infrastructure/ApplicationIconCache.cs`、`Forms/MainForm.cs`、`Forms/CDriveSuggestionDialog.cs`
+  - 修改后重新构建、发布安装版，并重新跑 3 轮完整 QA
 
 ## 尚未开始的源码方案
 - 退出后进程残留的专项收口
