@@ -1,32 +1,54 @@
 ﻿# 被打断时的进度快照
 
 ## 最近可恢复状态
-- 当前任务：图标高清显示与缩放清晰度专项收口第二轮
+- 当前任务：图标高清显示与缩放清晰度专项验收
 - 当前状态：进行中
 - 当前阶段：下一轮收口 - 去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
-- 本次摘要：开始本轮图标清晰度专项收口：先修 ApplicationIconCache 的图标提取链，再去掉 MainForm 与 CDriveSuggestionDialog 中 DataGridViewImageColumn.Zoom 的二次缩放，修改后必须重新发布安装版并完成 3 轮完整 QA。
-- 最近检查点：checkpoints/2026-04-27_014312_start.md
+- 本次摘要：已完成第二轮真实代码收口：ApplicationIconCache 已移除 ExtractAssociatedIcon 并改成资源索引感知的 Shell 提取链，MainForm 与 CDriveSuggestionDialog 的图标列已移除 Zoom 二次缩放，Run-Icon-Clarity-QA.ps1 已新增稳定态截图。dotnet build 已 0 警告通过，安装版 D:\磁盘清理器\磁盘清理器.exe 已重新发布，并完成 3 轮完整 QA，证据目录为 artifacts/icon-qa/2026-04-27_015122。当前不能宣称已修复完成：图标仍未通过桌面快捷方式级人眼验收，且 04-settled.png 暴露出控件叠影。
+- 最近检查点：checkpoints/2026-04-27_020514_progress.md
 
 ## 已完成到哪一步
-- 已新增并跑通从安装开始的图标清晰度三轮 QA 脚本 tools/Run-Icon-Clarity-QA.ps1。真实安装路径 D:\磁盘清理器\磁盘清理器.exe 已完成 3 轮完整测试，当前机器 DPI 为 168（175%），三轮启动耗时 2.25s / 1.95s / 2.31s，三轮均正常关闭且无残留进程。最新证据目录为 artifacts/icon-qa/2026-04-27_012521。注意：自动化流程已通过，但图标是否达到桌面快捷方式级清晰度仍需结合截图做人眼验收，暂不宣称已修复完成。
+- 已完成第二轮真实代码收口：ApplicationIconCache 已移除 ExtractAssociatedIcon 并改成资源索引感知的 Shell 提取链，MainForm 与 CDriveSuggestionDialog 的图标列已移除 Zoom 二次缩放，Run-Icon-Clarity-QA.ps1 已新增稳定态截图。dotnet build 已 0 警告通过，安装版 D:\磁盘清理器\磁盘清理器.exe 已重新发布，并完成 3 轮完整 QA，证据目录为 artifacts/icon-qa/2026-04-27_015122。当前不能宣称已修复完成：图标仍未通过桌面快捷方式级人眼验收，且 04-settled.png 暴露出控件叠影。
 
 ## 当前做到一半的内容
-- 开始本轮图标清晰度专项收口：先修 ApplicationIconCache 的图标提取链，再去掉 MainForm 与 CDriveSuggestionDialog 中 DataGridViewImageColumn.Zoom 的二次缩放，修改后必须重新发布安装版并完成 3 轮完整 QA。
+- '图标仍未通过桌面快捷方式级人眼验收'
 
 ## 当前还没完成的部分
-- '图标是否达到桌面快捷方式级清晰度仍未通过人眼验收'
-- '内部列表图标与桌面快捷方式图标仍有清晰度差距'
-- '需要在代码修改后重新发布安装版并完成
+- '图标仍未通过桌面快捷方式级人眼验收'
+- '自动化截图尚未稳定覆盖真实列表图标区'
+- '04-settled.png
 
 ## 当前已改的文件
+- 'Infrastructure/ApplicationIconCache.cs'
+- 'Forms/MainForm.cs'
+- 'Forms/CDriveSuggestionDialog.cs'
+- 'tools/Run-Icon-Clarity-QA.ps1'
+- 'artifacts/icon-qa/2026-04-27_015122/environment.json'
+- 'artifacts/icon-qa/2026-04-27_015122/summary.json'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-01/01-launch.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-01/02-large.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-01/03-small.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-01/04-settled.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-01/result.json'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-02/01-launch.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-02/02-large.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-02/03-small.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-02/04-settled.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-02/result.json'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-03/01-launch.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-03/02-large.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-03/03-small.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-03/04-settled.png'
+- 'artifacts/icon-qa/2026-04-27_015122/cycle-03/result.json'
 - 'SOURCE_CHANGE_LEDGER.md'
+- 'TODO_NOT_FIXED.md'
 - 'CURRENT_TASK.md'
 - 'INTERRUPTED_PROGRESS.md'
 - 'OPTIMIZATION_LOG.md'
 - 'AI_STATE.json'
 
 ## 如果现在继续，下一步先做什么
-- '图标是否达到桌面快捷方式级清晰度仍未通过人眼验收'
+- '图标仍未通过桌面快捷方式级人眼验收'
 
 ## 说明
 - 当前任务未被新的中断覆盖，本文件保留最近一次可直接恢复的状态。

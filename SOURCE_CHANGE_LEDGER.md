@@ -49,6 +49,37 @@
 
 ## 已完成源码修改
 
+### 2026-04-27 01:56 图标提取链与二次缩放链第二轮收口
+- 范围：
+  - `Infrastructure/ApplicationIconCache.cs`
+  - `Forms/MainForm.cs`
+  - `Forms/CDriveSuggestionDialog.cs`
+  - `tools/Run-Icon-Clarity-QA.ps1`
+- 已做：
+  - `ApplicationIconCache` 已移除 `Icon.ExtractAssociatedIcon(...)` 主提取链
+  - 新增更接近桌面快捷方式显示链路的 Shell 图标提取：
+    - 支持保留图标资源索引
+    - 支持 `DisplayIcon` 常见的 `路径,索引` 形式
+    - 优先按目标尺寸提取 Shell 资源图标
+    - 目录和普通文件补上 Shell 文件图标提取回退
+  - `ApplicationIconCache` 的位图生成改成“有原尺寸就原尺寸拷贝、过大时高质量缩小、过小时居中不强行放大”，减少低清素材被二次放大后的发糊
+  - `MainForm` 的三张主表图标列已从 `DataGridViewImageCellLayout.Zoom` 改成 `Normal`
+  - `CDriveSuggestionDialog` 图标列已从 `DataGridViewImageCellLayout.Zoom` 改成 `Normal`
+  - 主窗和建议窗的图标尺寸计算改成“按当前 DPI + 当前行高 + 当前列宽”共同决定，避免图标先生成过大，再在单元格里被运行时缩放
+  - `tools/Run-Icon-Clarity-QA.ps1` 新增稳定态截图 `04-settled.png`
+  - 已完成 `dotnet build PortableCDriveCleaner.csproj`
+  - 已完成基于安装版路径 `D:\磁盘清理器\磁盘清理器.exe` 的新一组三轮完整 QA
+- 状态：
+  - 代码修改已完成，编译通过，安装版已重新发布，三轮自动化完整流程已通过
+- 结果：
+  - 已真实修到“提取 API”与“列表二次缩放”这两条最可疑链路
+  - 但当前仍未通过最终人眼验收，不能宣称已经达到桌面快捷方式级清晰度
+  - 新 QA 的稳定态截图还抓到了控件叠影，说明缩放/重绘链仍有未结案问题
+- 安装版时间戳：
+  - `D:\磁盘清理器\磁盘清理器.exe`
+  - `2026-04-27 01:56:00`
+  - QA 证据目录：`artifacts/icon-qa/2026-04-27_015122`
+
 ### 2026-04-27 图标清晰度 QA 闭环脚本与三轮实跑
 - 范围：
   - `tools/Run-Icon-Clarity-QA.ps1`
@@ -229,19 +260,20 @@
 
 ### 当前正在做
 - 任务：
-  - 图标高清显示与缩放清晰度专项收口第二轮
+  - 图标高清显示与缩放清晰度专项验收继续收口
 - 当前进度：
   - GitHub 持久记忆基座已完成
-  - 已完成三轮自动化 QA 脚本和真实安装路径实跑
-  - 已确认最可疑残留链路是 `ExtractAssociatedIcon` 与 `DataGridViewImageColumn.Zoom`
+  - 已完成 `ApplicationIconCache` 提取链和表格图标显示链的第二轮真实修改
+  - 已完成 2 组三轮自动化 QA，第二组证据目录为 `artifacts/icon-qa/2026-04-27_015122`
 - 当前未完成：
-  - 图标清晰度是否已随 DPI 图标桶显著改善，仍需实机验收
   - 内部列表图标是否已达到桌面快捷方式级清晰度，仍需人眼验收
+  - 自动化截图还没有稳定覆盖真实列表图标区，仍需补强验收路径
   - 图标误用与通用 fallback 是否仍然显得过糊、过泛，仍需人眼验收
+  - 稳定态截图里出现了控件叠影，缩放/重绘问题仍未完全结案
 - 下一步精确落点：
-  - 先把本轮“图标提取链 + 表格二次缩放链”写回 checkpoint
-  - 然后修改 `Infrastructure/ApplicationIconCache.cs`、`Forms/MainForm.cs`、`Forms/CDriveSuggestionDialog.cs`
-  - 修改后重新构建、发布安装版，并重新跑 3 轮完整 QA
+  - 先把这轮真实修改和三轮 QA 结果写回 checkpoint 并推送
+  - 再补一条能稳定看到真实列表图标的验收路径
+  - 然后继续处理 `04-settled.png` 暴露出来的重绘叠影问题
 
 ## 尚未开始的源码方案
 - 退出后进程残留的专项收口
@@ -258,6 +290,6 @@
 ## 发布状态
 - 最近一次已知安装版时间戳：
   - `D:\磁盘清理器\磁盘清理器.exe`
-  - `2026-04-24 23:28:16`
+  - `2026-04-27 01:56:00`
 - 当前 GitHub 私有仓库：
   - `https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`
