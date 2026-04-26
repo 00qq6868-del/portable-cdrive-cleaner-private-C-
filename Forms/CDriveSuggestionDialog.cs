@@ -57,20 +57,20 @@ public sealed class CDriveSuggestionDialog : Form
                 UpdateResponsiveLayout();
             }
         };
-        ResizeBegin += (_, _) => _resizeDragInProgress = true;
+        ResizeBegin += (_, _) =>
+        {
+            _resizeDragInProgress = true;
+            SetControlRedraw(_grid, enabled: false);
+        };
         ResizeEnd += (_, _) =>
         {
             _resizeDragInProgress = false;
+            SetControlRedraw(_grid, enabled: true);
             UpdateResponsiveLayout();
             FlushPendingIconInvalidate();
         };
         Shown += (_, _) => UpdateResponsiveLayout();
-        DpiChanged += (_, _) => BeginInvoke(new Action(() =>
-        {
-            UiScaleHelper.RefreshRegisteredButtonSizing(this);
-            RefreshFooterButtonSizing();
-            UpdateResponsiveLayout();
-        }));
+        DpiChanged += (_, _) => BeginInvoke(new Action(HandleDpiChanged));
         FormClosing += (_, _) => _iconLoadCts?.Cancel();
         UpdateSummary();
     }
@@ -284,7 +284,7 @@ public sealed class CDriveSuggestionDialog : Form
         _iconColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
         _iconColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
         _iconColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _iconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetSmallIcon(null, null);
+        _iconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), GetCurrentIconSize());
         _grid.Columns.Add(_iconColumn);
         _grid.Columns.Add(CreateTextColumn(nameof(MigrationCandidate.Name), "名称", 180));
         _grid.Columns.Add(CreateTextColumn(nameof(MigrationCandidate.SizeText), "体积", 96, alignRight: true));
@@ -722,7 +722,9 @@ public sealed class CDriveSuggestionDialog : Form
                 continue;
             }
 
-            _candidateIcons[key] = ApplicationIconCache.GetSmallIcon(ResolveCandidateIconSourcePath(candidate), ResolveCandidateInstallRoot(candidate));
+            _candidateIcons[key] = ApplicationIconCache.GetIcon(
+                ResolveCandidateIconRequest(candidate),
+                GetCurrentIconSize());
             refreshed++;
             if (refreshed % 24 == 0)
             {
@@ -777,7 +779,7 @@ public sealed class CDriveSuggestionDialog : Form
             return image;
         }
 
-        return ApplicationIconCache.GetSmallIcon(null, null);
+        return ApplicationIconCache.GetIcon(ResolveCandidateIconRequest(candidate), GetCurrentIconSize());
     }
 
     private static string BuildIconTooltip(MigrationCandidate candidate)
@@ -796,6 +798,13 @@ public sealed class CDriveSuggestionDialog : Form
         }
 
         return Directory.Exists(candidate.SourcePath) ? candidate.SourcePath : string.Empty;
+    }
+
+    private static IconLookupRequest ResolveCandidateIconRequest(MigrationCandidate candidate)
+    {
+        var iconSourcePath = ResolveCandidateIconSourcePath(candidate);
+        var installRoot = ResolveCandidateInstallRoot(candidate);
+        return IconSemanticResolver.ForMigrationCandidate(candidate, iconSourcePath, installRoot);
     }
 
     private static string ResolveCandidateIconSourcePath(MigrationCandidate candidate)
@@ -946,6 +955,8 @@ public sealed class CDriveSuggestionDialog : Form
         _summaryLabel.MaximumSize = new Size(wrapWidth, 0);
         _phaseStatusLabel.MaximumSize = new Size(wrapWidth, 0);
         _teachingLabel.MaximumSize = new Size(wrapWidth, 0);
+        RefreshIconColumnPresentation();
+        RefreshFooterButtonSizing();
     }
 
     private void ApplyThemeColors()
@@ -972,5 +983,61 @@ public sealed class CDriveSuggestionDialog : Form
         catch
         {
         }
+    }
+
+    private void HandleDpiChanged()
+    {
+        UiScaleHelper.RefreshRegisteredButtonSizing(this);
+        ReloadDynamicIconsForCurrentDpi();
+        UpdateResponsiveLayout();
+    }
+
+    private void ReloadDynamicIconsForCurrentDpi()
+    {
+        _candidateIcons.Clear();
+        RefreshIconColumnPresentation();
+        QueueIconLoad(_rows.ToList());
+        _grid.Invalidate();
+    }
+
+    private void RefreshIconColumnPresentation()
+    {
+        var iconSize = GetCurrentIconSize();
+        _iconColumn.Width = Math.Max(58, UiScaleHelper.MeasureGridColumnWidth("图标", 58, Math.Max(28, iconSize + 16)));
+        _iconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), iconSize);
+    }
+
+    private int GetCurrentIconSize()
+    {
+        return ApplicationIconCache.GetRecommendedIconSizeForDpi(DeviceDpi, logicalSize: 18);
+    }
+
+    private static void SetControlRedraw(Control control, bool enabled)
+    {
+        if (!control.IsHandleCreated || control.IsDisposed)
+        {
+            return;
+        }
+
+        try
+        {
+            NativeMethods.SendMessage(control.Handle, NativeMethods.WmSetRedraw, enabled ? 1 : 0, 0);
+            if (enabled)
+            {
+                control.Invalidate(true);
+                control.Update();
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private static class NativeMethods
+    {
+        public const int WmSetRedraw = 0x000B;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
     }
 }

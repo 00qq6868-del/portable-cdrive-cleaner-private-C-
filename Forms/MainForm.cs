@@ -162,6 +162,7 @@ public sealed class MainForm : Form
     private readonly System.Windows.Forms.Timer _jobCenterRefreshTimer = new();
     private readonly System.Windows.Forms.Timer _resizeRefreshTimer = new();
     private readonly object _jobCenterStateSync = new();
+    private readonly Dictionary<Control, FrozenAutoSizeState> _resizeFrozenControls = [];
     private OperationQueueState? _pendingJobCenterState;
     private bool _hasPendingJobCenterState;
     private bool _resizeDragInProgress;
@@ -265,14 +266,18 @@ public sealed class MainForm : Form
         {
             _resizeDragInProgress = true;
             _resizeRefreshTimer.Stop();
+            SuspendResizeSensitiveLayout();
+            SetHeavyRedrawSuspended(suspend: true);
         };
         Resize += (_, _) => HandleDeferredResize();
         ResizeEnd += (_, _) =>
         {
             _resizeDragInProgress = false;
+            ResumeResizeSensitiveLayout();
+            SetHeavyRedrawSuspended(suspend: false);
             FlushDeferredResizeRefresh(forceLayout: true);
         };
-        DpiChanged += (_, _) => BeginInvoke(new Action(() => RefreshScaledUi(forceLayout: true)));
+        DpiChanged += (_, _) => BeginInvoke(new Action(HandleDpiChanged));
         Shown += async (_, _) =>
         {
             RefreshScaledUi(forceLayout: true);
@@ -1066,7 +1071,7 @@ public sealed class MainForm : Form
         _cleanupIconColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
         _cleanupIconColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
         _cleanupIconColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _cleanupIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetSmallIcon(null, null);
+        _cleanupIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultCleanup(), GetCurrentIconSize());
 
         _driveColumn.DataPropertyName = nameof(CleanupSelectionRow.DriveName);
         _driveColumn.HeaderText = "盘符";
@@ -1242,7 +1247,7 @@ public sealed class MainForm : Form
         _overviewIconColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
         _overviewIconColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
         _overviewIconColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _overviewIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetSmallIcon(null, null);
+        _overviewIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), GetCurrentIconSize());
         _overviewGrid.Columns.Add(_overviewIconColumn);
 
         _overviewGrid.Columns.Add(new DataGridViewTextBoxColumn
@@ -1426,7 +1431,7 @@ public sealed class MainForm : Form
         _infrequentIconColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
         _infrequentIconColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
         _infrequentIconColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _infrequentIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetSmallIcon(null, null);
+        _infrequentIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultInfrequentApp(), GetCurrentIconSize());
         _infrequentGrid.Columns.Add(_infrequentIconColumn);
 
         _infrequentGrid.Columns.Add(new DataGridViewTextBoxColumn
@@ -1900,6 +1905,7 @@ public sealed class MainForm : Form
     private void LoadInfrequentIcons(IReadOnlyCollection<InfrequentSoftwareEntry> entries, CancellationToken cancellationToken)
     {
         var refreshed = 0;
+        var iconSize = GetCurrentIconSize();
         foreach (var entry in entries)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -1912,7 +1918,9 @@ public sealed class MainForm : Form
                 continue;
             }
 
-            entry.IconImage = ApplicationIconCache.GetSmallIcon(entry.IconSourcePath, entry.InstallRoot);
+            entry.IconImage = ApplicationIconCache.GetIcon(
+                IconSemanticResolver.ForInfrequentApp(entry),
+                iconSize);
             refreshed++;
             if (refreshed % 24 == 0)
             {
@@ -1926,6 +1934,7 @@ public sealed class MainForm : Form
     private void LoadCleanupIcons(IReadOnlyCollection<CleanupSelectionRow> rows, CancellationToken cancellationToken)
     {
         var refreshed = 0;
+        var iconSize = GetCurrentIconSize();
         foreach (var row in rows)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -1939,9 +1948,9 @@ public sealed class MainForm : Form
                 continue;
             }
 
-            _cleanupIcons[iconKey] = ApplicationIconCache.GetSmallIcon(
-                ResolveCleanupIconSourcePath(row),
-                ResolveCleanupIconInstallRoot(row));
+            _cleanupIcons[iconKey] = ApplicationIconCache.GetIcon(
+                ResolveCleanupIconRequest(row),
+                iconSize);
             refreshed++;
             if (refreshed % 24 == 0)
             {
@@ -1955,6 +1964,7 @@ public sealed class MainForm : Form
     private void LoadOverviewIcons(IReadOnlyCollection<CDriveOverviewEntry> entries, CancellationToken cancellationToken)
     {
         var refreshed = 0;
+        var iconSize = GetCurrentIconSize();
         foreach (var entry in entries)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -1968,9 +1978,9 @@ public sealed class MainForm : Form
                 continue;
             }
 
-            _overviewIcons[iconKey] = ApplicationIconCache.GetSmallIcon(
-                ResolveOverviewIconSourcePath(entry),
-                ResolveOverviewIconInstallRoot(entry));
+            _overviewIcons[iconKey] = ApplicationIconCache.GetIcon(
+                ResolveOverviewIconRequest(entry),
+                iconSize);
             refreshed++;
             if (refreshed % 24 == 0)
             {
@@ -4667,23 +4677,25 @@ public sealed class MainForm : Form
         try
         {
             _rootLayout.Padding = ultraCompact
-                ? new Padding(8, 6, 8, 6)
+                ? new Padding(6, 4, 6, 4)
                 : compact
                     ? new Padding(12, 10, 12, 10)
                     : new Padding(16, 14, 16, 12);
-            ApplySurfaceSpacing(_headerPanel, ultraCompact ? new Padding(10, 6, 10, 6) : compact ? new Padding(14, 10, 14, 10) : new Padding(18, 14, 18, 14), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_scanWarningPanel, ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_resultBannerPanel, ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_jobCenterPanel, ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_viewModePanel, ultraCompact ? new Padding(6, 4, 6, 4) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_toolbarPanel, ultraCompact ? new Padding(6, 4, 6, 4) : compact ? new Padding(10, 8, 10, 8) : new Padding(12, 10, 12, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_driveTabsPanel, ultraCompact ? new Padding(6, 4, 6, 3) : compact ? new Padding(10, 8, 10, 6) : new Padding(12, 10, 12, 8), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_filtersPanel, ultraCompact ? new Padding(8, 4, 8, 4) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 12, 14, 12), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
-            ApplySurfaceSpacing(_summaryPanel, ultraCompact ? new Padding(8, 4, 8, 4) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_headerPanel, ultraCompact ? new Padding(8, 5, 8, 5) : compact ? new Padding(14, 10, 14, 10) : new Padding(18, 14, 18, 14), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_scanWarningPanel, ultraCompact ? new Padding(7, 4, 7, 4) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_resultBannerPanel, ultraCompact ? new Padding(7, 4, 7, 4) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_jobCenterPanel, ultraCompact ? new Padding(7, 4, 7, 4) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_viewModePanel, ultraCompact ? new Padding(5, 3, 5, 3) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_toolbarPanel, ultraCompact ? new Padding(5, 3, 5, 3) : compact ? new Padding(10, 8, 10, 8) : new Padding(12, 10, 12, 10), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_driveTabsPanel, ultraCompact ? new Padding(5, 3, 5, 2) : compact ? new Padding(10, 8, 10, 6) : new Padding(12, 10, 12, 8), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_filtersPanel, ultraCompact ? new Padding(7, 3, 7, 3) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 12, 14, 12), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
+            ApplySurfaceSpacing(_summaryPanel, ultraCompact ? new Padding(7, 3, 7, 3) : compact ? new Padding(12, 8, 12, 8) : new Padding(14, 10, 14, 10), ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 10));
             _statusStrip.Margin = ultraCompact ? new Padding(0, 4, 0, 0) : compact ? new Padding(0, 6, 0, 0) : new Padding(0, 10, 0, 0);
-            _teachingPanel.Padding = ultraCompact ? new Padding(6, 4, 6, 4) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8);
-            _teachingPanel.Margin = ultraCompact ? new Padding(0, 0, 0, 3) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 8);
+            _teachingPanel.Padding = ultraCompact ? new Padding(5, 3, 5, 3) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8);
+            _teachingPanel.Margin = ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 8);
+            _teachingPanel.Visible = !ultraCompact;
             _teachingSecondaryLabel.Visible = !ultraCompact && (!compact || ClientSize.Height > TeachingSecondaryHideHeightThreshold);
+            _selectionHintLabel.Visible = !ultraCompact;
 
             ApplyControlFont(_headerTitleLabel, ultraCompact ? 12.6f : compact ? 13.6f : 15f, FontStyle.Bold);
             ApplyControlFont(_headerModeLabel, ultraCompact ? 7.7f : compact ? 8.1f : 8.5f, FontStyle.Bold);
@@ -4804,6 +4816,13 @@ public sealed class MainForm : Form
         _resizeRefreshTimer.Start();
     }
 
+    private void HandleDpiChanged()
+    {
+        ReloadDynamicIconsForCurrentDpi();
+        RefreshScaledUi(forceLayout: true);
+        FlushPendingVisualRefreshes();
+    }
+
     private void FlushDeferredResizeRefresh(bool forceLayout = false)
     {
         if (_resizeDragInProgress && !forceLayout)
@@ -4822,6 +4841,131 @@ public sealed class MainForm : Form
         _pendingResizeForceLayout = false;
         RefreshScaledUi(forceLayout: needsLayoutRefresh, refreshGridContent: !_resizeDragInProgress || forceLayout);
         FlushPendingVisualRefreshes();
+    }
+
+    private void SuspendResizeSensitiveLayout()
+    {
+        FreezeAutoSizedControl(_headerPanel);
+        FreezeAutoSizedControl(_scanWarningPanel);
+        FreezeAutoSizedControl(_resultBannerPanel);
+        FreezeAutoSizedControl(_jobCenterPanel);
+        FreezeAutoSizedControl(_viewModePanel);
+        FreezeAutoSizedControl(_toolbarPanel);
+        FreezeAutoSizedControl(_driveTabsPanel);
+        FreezeAutoSizedControl(_filtersPanel);
+        FreezeAutoSizedControl(_summaryPanel);
+        FreezeAutoSizedControl(_teachingPanel);
+        FreezeAutoSizedControl(_jobListFlow);
+        FreezeAutoSizedControl(_viewModeFlow);
+        FreezeAutoSizedControl(_driveTabsFlow);
+        FreezeAutoSizedControl(_quickFiltersHost);
+    }
+
+    private void ResumeResizeSensitiveLayout()
+    {
+        foreach (var (control, state) in _resizeFrozenControls.ToArray())
+        {
+            if (control.IsDisposed)
+            {
+                continue;
+            }
+
+            control.SuspendLayout();
+            try
+            {
+                control.AutoSize = state.AutoSize;
+                SetAutoSizeMode(control, state.AutoSizeMode);
+                control.MinimumSize = state.MinimumSize;
+                control.MaximumSize = state.MaximumSize;
+            }
+            finally
+            {
+                control.ResumeLayout(true);
+            }
+        }
+
+        _resizeFrozenControls.Clear();
+    }
+
+    private void FreezeAutoSizedControl(Control control)
+    {
+        if (control.IsDisposed || _resizeFrozenControls.ContainsKey(control))
+        {
+            return;
+        }
+
+        var autoSizeMode = control is Panel panel
+            ? panel.AutoSizeMode
+            : control is FlowLayoutPanel flowLayoutPanel
+                ? flowLayoutPanel.AutoSizeMode
+                : control is TableLayoutPanel tableLayoutPanel
+                    ? tableLayoutPanel.AutoSizeMode
+                    : AutoSizeMode.GrowOnly;
+        var state = new FrozenAutoSizeState(control.AutoSize, autoSizeMode, control.MinimumSize, control.MaximumSize);
+        _resizeFrozenControls[control] = state;
+        if (!control.AutoSize)
+        {
+            return;
+        }
+
+        control.SuspendLayout();
+        try
+        {
+            var preferredSize = control.PreferredSize;
+            control.AutoSize = false;
+            control.MinimumSize = new Size(0, Math.Max(control.Height, preferredSize.Height));
+            control.MaximumSize = Size.Empty;
+            control.Height = Math.Max(control.Height, preferredSize.Height);
+        }
+        finally
+        {
+            control.ResumeLayout(false);
+        }
+    }
+
+    private static void SetAutoSizeMode(Control control, AutoSizeMode autoSizeMode)
+    {
+        switch (control)
+        {
+            case FlowLayoutPanel flowLayoutPanel:
+                flowLayoutPanel.AutoSizeMode = autoSizeMode;
+                break;
+            case TableLayoutPanel tableLayoutPanel:
+                tableLayoutPanel.AutoSizeMode = autoSizeMode;
+                break;
+            case Panel panel:
+                panel.AutoSizeMode = autoSizeMode;
+                break;
+        }
+    }
+
+    private void SetHeavyRedrawSuspended(bool suspend)
+    {
+        SetControlRedraw(_grid, !suspend);
+        SetControlRedraw(_overviewGrid, !suspend);
+        SetControlRedraw(_infrequentGrid, !suspend);
+        SetControlRedraw(_jobCenterPanel, !suspend);
+    }
+
+    private static void SetControlRedraw(Control control, bool enabled)
+    {
+        if (!control.IsHandleCreated || control.IsDisposed)
+        {
+            return;
+        }
+
+        try
+        {
+            NativeMethods.SendMessage(control.Handle, NativeMethods.WmSetRedraw, enabled ? 1 : 0, 0);
+            if (enabled)
+            {
+                control.Invalidate(true);
+                control.Update();
+            }
+        }
+        catch
+        {
+        }
     }
 
     private void HandleJobCardWidthRefreshRequest()
@@ -5627,7 +5771,7 @@ public sealed class MainForm : Form
             return image;
         }
 
-        return ApplicationIconCache.GetSmallIcon(null, null);
+        return ApplicationIconCache.GetIcon(ResolveCleanupIconRequest(row), GetCurrentIconSize());
     }
 
     private Image GetOverviewIcon(CDriveOverviewEntry entry)
@@ -5638,7 +5782,7 @@ public sealed class MainForm : Form
             return image;
         }
 
-        return ApplicationIconCache.GetSmallIcon(null, null);
+        return ApplicationIconCache.GetIcon(ResolveOverviewIconRequest(entry), GetCurrentIconSize());
     }
 
     private static string BuildCleanupIconTooltip(CleanupSelectionRow row)
@@ -5657,18 +5801,32 @@ public sealed class MainForm : Form
             : $"{entry.Name}\r\n图标来源：{iconSourcePath}";
     }
 
-    private static string GetCleanupIconKey(CleanupSelectionRow row)
+    private string GetCleanupIconKey(CleanupSelectionRow row)
     {
-        return string.IsNullOrWhiteSpace(row.Path)
-            ? row.Name
-            : row.Path.Trim();
+        var request = ResolveCleanupIconRequest(row);
+        var primary = string.IsNullOrWhiteSpace(row.Path) ? row.Name : row.Path.Trim();
+        return $"{GetCurrentIconSize()}|{request.BuildCacheKey()}|{primary}";
     }
 
-    private static string GetOverviewIconKey(CDriveOverviewEntry entry)
+    private string GetOverviewIconKey(CDriveOverviewEntry entry)
     {
-        return string.IsNullOrWhiteSpace(entry.Path)
-            ? entry.Name
-            : entry.Path.Trim();
+        var request = ResolveOverviewIconRequest(entry);
+        var primary = string.IsNullOrWhiteSpace(entry.Path) ? entry.Name : entry.Path.Trim();
+        return $"{GetCurrentIconSize()}|{request.BuildCacheKey()}|{primary}";
+    }
+
+    private static IconLookupRequest ResolveCleanupIconRequest(CleanupSelectionRow row)
+    {
+        var iconSourcePath = ResolveCleanupIconSourcePath(row);
+        var installRoot = ResolveCleanupIconInstallRoot(row);
+        return IconSemanticResolver.ForCleanupRow(row, iconSourcePath, installRoot);
+    }
+
+    private static IconLookupRequest ResolveOverviewIconRequest(CDriveOverviewEntry entry)
+    {
+        var iconSourcePath = ResolveOverviewIconSourcePath(entry);
+        var installRoot = ResolveOverviewIconInstallRoot(entry);
+        return IconSemanticResolver.ForOverviewEntry(entry, iconSourcePath, installRoot);
     }
 
     private static string ResolveCleanupIconSourcePath(CleanupSelectionRow row)
@@ -5933,16 +6091,17 @@ public sealed class MainForm : Form
         ApplyGridDensity(_grid);
         ApplyGridDensity(_overviewGrid);
         ApplyGridDensity(_infrequentGrid);
+        RefreshIconColumnPresentation();
     }
 
     private void ApplyGridDensity(DataGridView grid)
     {
         var cellFontSize = IsUltraCompactLayout ? 8.35f : IsCompactLayout ? 8.75f : 9f;
         var headerFontSize = IsUltraCompactLayout ? 8.4f : IsCompactLayout ? 8.8f : 9f;
-        var headerMinHeight = IsUltraCompactLayout ? 36 : IsCompactLayout ? 38 : 42;
-        var headerVerticalPadding = IsUltraCompactLayout ? 12 : IsCompactLayout ? 14 : 18;
-        var rowMinHeight = IsUltraCompactLayout ? 32 : IsCompactLayout ? 34 : 38;
-        var rowVerticalPadding = IsUltraCompactLayout ? 12 : IsCompactLayout ? 14 : 18;
+        var headerMinHeight = IsUltraCompactLayout ? 32 : IsCompactLayout ? 36 : 42;
+        var headerVerticalPadding = IsUltraCompactLayout ? 10 : IsCompactLayout ? 12 : 18;
+        var rowMinHeight = IsUltraCompactLayout ? 28 : IsCompactLayout ? 32 : 38;
+        var rowVerticalPadding = IsUltraCompactLayout ? 10 : IsCompactLayout ? 12 : 18;
 
         ApplyControlFont(grid, cellFontSize);
         grid.DefaultCellStyle.Font = grid.Font;
@@ -5964,6 +6123,51 @@ public sealed class MainForm : Form
                 row.Height = rowHeight;
             }
         }
+    }
+
+    private void RefreshIconColumnPresentation()
+    {
+        var iconSize = GetCurrentIconSize();
+        var cleanupPlaceholder = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultCleanup(), iconSize);
+        var overviewPlaceholder = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), iconSize);
+        var appPlaceholder = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultInfrequentApp(), iconSize);
+        var iconColumnWidth = ResolveIconColumnWidth(iconSize);
+
+        _cleanupIconColumn.Width = iconColumnWidth;
+        _cleanupIconColumn.DefaultCellStyle.NullValue = cleanupPlaceholder;
+
+        _overviewIconColumn.Width = iconColumnWidth;
+        _overviewIconColumn.DefaultCellStyle.NullValue = overviewPlaceholder;
+
+        _infrequentIconColumn.Width = iconColumnWidth;
+        _infrequentIconColumn.DefaultCellStyle.NullValue = appPlaceholder;
+    }
+
+    private void ReloadDynamicIconsForCurrentDpi()
+    {
+        _cleanupIcons.Clear();
+        _overviewIcons.Clear();
+
+        foreach (var entry in _infrequentRows)
+        {
+            entry.IconImage = null;
+        }
+
+        RefreshIconColumnPresentation();
+
+        QueueCleanupIconLoad(_visibleRows.ToList());
+        QueueOverviewIconLoad(_visibleOverviewRows.ToList());
+        QueueInfrequentIconLoad(_visibleInfrequentRows.ToList());
+    }
+
+    private int GetCurrentIconSize()
+    {
+        return ApplicationIconCache.GetRecommendedIconSizeForDpi(DeviceDpi, logicalSize: 18);
+    }
+
+    private static int ResolveIconColumnWidth(int iconSize)
+    {
+        return Math.Max(58, UiScaleHelper.MeasureGridColumnWidth("图标", 58, Math.Max(28, iconSize + 16)));
     }
 
     private static void ConfigureActionButton(Button button, string text, int minimumWidth, bool primary = false)
@@ -6173,6 +6377,20 @@ public sealed class MainForm : Form
         {
             comboBox.SelectedIndex = 0;
         }
+    }
+
+    private readonly record struct FrozenAutoSizeState(
+        bool AutoSize,
+        AutoSizeMode AutoSizeMode,
+        Size MinimumSize,
+        Size MaximumSize);
+
+    private static class NativeMethods
+    {
+        public const int WmSetRedraw = 0x000B;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
     }
 
     private sealed record FilterOption(string Value, string Text)

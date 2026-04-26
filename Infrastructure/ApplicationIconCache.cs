@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace PortableCDriveCleaner.Infrastructure;
 
@@ -12,26 +13,30 @@ public static class ApplicationIconCache
     private const uint ShgsiIcon = 0x000000100;
     private const uint ShgsiLargeIcon = 0x000000000;
     private const uint ShgsiSmallIcon = 0x000000001;
+    private static readonly int[] SizeBuckets = [16, 20, 24, 32, 40, 48, 64, 128, 256];
 
     private static readonly ConcurrentDictionary<string, Image> Cache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<int, Image> FallbackIcons = new();
+    private static readonly ConcurrentDictionary<string, Image> FallbackIcons = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Lazy<Icon> AppIcon = new(LoadApplicationIcon);
 
     public static Image GetSmallIcon(string? iconSourcePath, string? installRoot)
     {
-        return GetIcon(iconSourcePath, installRoot, SmallIconSize);
+        return GetSmallIcon(new IconLookupRequest(iconSourcePath, installRoot, IconSemanticKind.Application));
     }
 
-    public static Icon GetAppIcon()
+    public static Image GetSmallIcon(IconLookupRequest request)
     {
-        return (Icon)AppIcon.Value.Clone();
+        return GetIcon(request, SmallIconSize);
     }
 
-    public static Image GetIcon(string? iconSourcePath, string? installRoot, int size)
+    public static Image GetIcon(IconLookupRequest request, int size)
     {
-        var normalizedSize = NormalizeSize(size);
-        var fallbackKind = ResolveFallbackKind(iconSourcePath, installRoot);
-        foreach (var candidate in EnumerateCandidates(iconSourcePath, installRoot))
+        var normalizedSize = GetRecommendedIconSize(size);
+        var fallbackKind = ResolveFallbackKind(request);
+        var fallbackIcon = GetFallbackIcon(normalizedSize, fallbackKind);
+        var cachePrefix = $"dark|{normalizedSize}|{request.BuildCacheKey()}";
+
+        foreach (var candidate in EnumerateCandidates(request))
         {
             var normalized = NormalizeIconPath(candidate);
             if (string.IsNullOrWhiteSpace(normalized) || (!File.Exists(normalized) && !Directory.Exists(normalized)))
@@ -39,37 +44,62 @@ public static class ApplicationIconCache
                 continue;
             }
 
-            var cacheKey = $"{normalizedSize}|{normalized}";
-            var image = Cache.GetOrAdd(cacheKey, _ => LoadImageFromPath(normalized, normalizedSize, fallbackKind));
-            if (!ReferenceEquals(image, GetFallbackIcon(normalizedSize, fallbackKind)))
+            var cacheKey = $"{cachePrefix}|{normalized}";
+            var image = Cache.GetOrAdd(cacheKey, _ => LoadImageFromPath(normalized, normalizedSize, request.SemanticKind, fallbackKind));
+            if (!ReferenceEquals(image, fallbackIcon))
             {
                 return image;
             }
         }
 
-        return GetFallbackIcon(normalizedSize, fallbackKind);
+        return fallbackIcon;
     }
 
-    private static IEnumerable<string> EnumerateCandidates(string? iconSourcePath, string? installRoot)
+    public static Icon GetAppIcon()
+    {
+        return (Icon)AppIcon.Value.Clone();
+    }
+
+    public static int GetRecommendedIconSize(int desiredSize)
+    {
+        var normalized = Math.Max(16, desiredSize);
+        foreach (var bucket in SizeBuckets)
+        {
+            if (normalized <= bucket)
+            {
+                return bucket;
+            }
+        }
+
+        return SizeBuckets[^1];
+    }
+
+    public static int GetRecommendedIconSizeForDpi(int deviceDpi, int logicalSize = SmallIconSize)
+    {
+        var scaledSize = (int)Math.Round(logicalSize * Math.Max(deviceDpi, 96) / 96d);
+        return GetRecommendedIconSize(scaledSize);
+    }
+
+    private static IEnumerable<string> EnumerateCandidates(IconLookupRequest request)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (TryAddCandidate(iconSourcePath, seen, out var directSource))
+        if (TryAddCandidate(request.IconSourcePath, seen, out var directSource))
         {
             yield return directSource;
         }
 
-        if (TryAddCandidate(installRoot, seen, out var directInstallRoot))
+        if (TryAddCandidate(request.InstallRoot, seen, out var directInstallRoot))
         {
             yield return directInstallRoot;
         }
 
-        if (!string.IsNullOrWhiteSpace(installRoot) && Directory.Exists(installRoot))
+        if (!string.IsNullOrWhiteSpace(request.InstallRoot) && Directory.Exists(request.InstallRoot))
         {
             IEnumerable<string> executables = [];
             try
             {
-                executables = Directory.EnumerateFiles(installRoot, "*.exe", SearchOption.TopDirectoryOnly).Take(8).ToList();
+                executables = Directory.EnumerateFiles(request.InstallRoot, "*.exe", SearchOption.TopDirectoryOnly).Take(8).ToList();
             }
             catch
             {
@@ -91,14 +121,19 @@ public static class ApplicationIconCache
         return !string.IsNullOrWhiteSpace(normalized) && seen.Add(normalized);
     }
 
-    private static Image LoadImageFromPath(string normalizedPath, int size, FallbackIconKind fallbackKind)
+    private static Image LoadImageFromPath(
+        string normalizedPath,
+        int size,
+        IconSemanticKind semanticKind,
+        FallbackIconKind fallbackKind)
     {
         try
         {
             if (Directory.Exists(normalizedPath))
             {
-                using var directoryIcon = GetStockIcon(FallbackIconKind.Folder, size);
-                return CreateValidatedBitmap(directoryIcon, size, fallbackKind);
+                return IsDirectorySemantic(semanticKind)
+                    ? CreateBitmapFromStockIcon(fallbackKind, size)
+                    : GetFallbackIcon(size, fallbackKind);
             }
 
             if (normalizedPath.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
@@ -120,6 +155,11 @@ public static class ApplicationIconCache
         return GetFallbackIcon(size, fallbackKind);
     }
 
+    private static bool IsDirectorySemantic(IconSemanticKind semanticKind)
+    {
+        return semanticKind is IconSemanticKind.Directory or IconSemanticKind.Drive or IconSemanticKind.UserData;
+    }
+
     private static Image CreateValidatedBitmap(Icon icon, int size, FallbackIconKind fallbackKind)
     {
         var bitmap = CreateBitmap(icon, size);
@@ -134,7 +174,7 @@ public static class ApplicationIconCache
 
     private static Image GetFallbackIcon(int size, FallbackIconKind kind)
     {
-        var cacheKey = (size * 10) + (int)kind;
+        var cacheKey = $"dark|{size}|{kind}";
         return FallbackIcons.GetOrAdd(cacheKey, _ => CreateFallbackIcon(size, kind));
     }
 
@@ -147,9 +187,23 @@ public static class ApplicationIconCache
         }
         catch
         {
-            using var icon = new Icon(Application.ExecutablePath, new Size(size, size));
-            return CreateBitmap(icon, size);
+            try
+            {
+                using var icon = new Icon(Application.ExecutablePath, new Size(size, size));
+                return CreateBitmap(icon, size);
+            }
+            catch
+            {
+                using var icon = (Icon)SystemIcons.Application.Clone();
+                return CreateBitmap(icon, size);
+            }
         }
+    }
+
+    private static Image CreateBitmapFromStockIcon(FallbackIconKind kind, int size)
+    {
+        using var icon = GetStockIcon(kind, size);
+        return CreateValidatedBitmap(icon, size, kind);
     }
 
     private static Icon LoadApplicationIcon()
@@ -198,44 +252,46 @@ public static class ApplicationIconCache
         return false;
     }
 
-    private static int NormalizeSize(int size)
+    private static FallbackIconKind ResolveFallbackKind(IconLookupRequest request)
     {
-        return Math.Clamp(size, 16, 256);
+        return request.SemanticKind switch
+        {
+            IconSemanticKind.Drive => FallbackIconKind.Drive,
+            IconSemanticKind.Directory => ResolveDirectoryFallbackKind(request.IconSourcePath, request.InstallRoot),
+            IconSemanticKind.UserData => FallbackIconKind.UserData,
+            IconSemanticKind.Cache => FallbackIconKind.Cache,
+            IconSemanticKind.Logs => FallbackIconKind.Logs,
+            IconSemanticKind.Package => FallbackIconKind.Package,
+            IconSemanticKind.Duplicate => FallbackIconKind.Duplicate,
+            IconSemanticKind.Cleanup => FallbackIconKind.Cleanup,
+            IconSemanticKind.System => FallbackIconKind.System,
+            IconSemanticKind.Document => FallbackIconKind.Document,
+            _ => FallbackIconKind.Application
+        };
     }
 
-    private static FallbackIconKind ResolveFallbackKind(string? iconSourcePath, string? installRoot)
+    private static FallbackIconKind ResolveDirectoryFallbackKind(string? iconSourcePath, string? installRoot)
     {
-        var candidates = new[] { iconSourcePath, installRoot };
-        foreach (var candidate in candidates)
+        foreach (var candidate in new[] { iconSourcePath, installRoot })
         {
             var normalized = NormalizeIconPath(candidate);
-            if (string.IsNullOrWhiteSpace(normalized))
+            if (string.IsNullOrWhiteSpace(normalized) || !Directory.Exists(normalized))
             {
                 continue;
             }
 
-            if (Directory.Exists(normalized))
+            var root = Path.GetPathRoot(normalized);
+            if (!string.IsNullOrWhiteSpace(root)
+                && string.Equals(
+                    normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                    root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase))
             {
-                var root = Path.GetPathRoot(normalized);
-                if (!string.IsNullOrWhiteSpace(root)
-                    && string.Equals(
-                        normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                        root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    return FallbackIconKind.Drive;
-                }
-
-                return FallbackIconKind.Folder;
-            }
-
-            if (Path.GetExtension(normalized).Equals(".exe", StringComparison.OrdinalIgnoreCase))
-            {
-                return FallbackIconKind.Application;
+                return FallbackIconKind.Drive;
             }
         }
 
-        return FallbackIconKind.Application;
+        return FallbackIconKind.Folder;
     }
 
     private static Icon GetStockIcon(FallbackIconKind kind, int size)
@@ -268,7 +324,15 @@ public static class ApplicationIconCache
         {
             FallbackIconKind.Folder => SHSTOCKICONID.Folder,
             FallbackIconKind.Drive => SHSTOCKICONID.DriveFixed,
-            _ => SHSTOCKICONID.Application
+            FallbackIconKind.UserData => SHSTOCKICONID.Users,
+            FallbackIconKind.Cache => SHSTOCKICONID.Stack,
+            FallbackIconKind.Logs => SHSTOCKICONID.DocumentNoAssociation,
+            FallbackIconKind.Package => SHSTOCKICONID.ZipFile,
+            FallbackIconKind.Duplicate => SHSTOCKICONID.MixedFiles,
+            FallbackIconKind.Cleanup => SHSTOCKICONID.Delete,
+            FallbackIconKind.System => SHSTOCKICONID.Settings,
+            FallbackIconKind.Document => SHSTOCKICONID.DocumentNoAssociation,
+            _ => SHSTOCKICONID.Software
         };
     }
 
@@ -300,14 +364,30 @@ public static class ApplicationIconCache
     {
         Application = 1,
         Folder = 2,
-        Drive = 3
+        Drive = 3,
+        UserData = 4,
+        Cache = 5,
+        Logs = 6,
+        Package = 7,
+        Duplicate = 8,
+        Cleanup = 9,
+        System = 10,
+        Document = 11
     }
 
     private enum SHSTOCKICONID : uint
     {
+        DocumentNoAssociation = 0,
         Application = 2,
         Folder = 3,
-        DriveFixed = 8
+        DriveFixed = 8,
+        Delete = 84,
+        Software = 82,
+        Stack = 55,
+        MixedFiles = 74,
+        Users = 96,
+        Settings = 106,
+        ZipFile = 105
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
