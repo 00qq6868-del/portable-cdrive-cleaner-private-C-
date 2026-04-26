@@ -1068,10 +1068,10 @@ public sealed class MainForm : Form
         _cleanupIconColumn.HeaderText = "图标";
         _cleanupIconColumn.Width = MeasureGridColumnWidth("图标", 18);
         _cleanupIconColumn.ReadOnly = true;
-        _cleanupIconColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
+        _cleanupIconColumn.ImageLayout = DataGridViewImageCellLayout.Normal;
         _cleanupIconColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
         _cleanupIconColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _cleanupIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultCleanup(), GetCurrentIconSize());
+        _cleanupIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultCleanup(), GetCurrentIconSize(_grid, _cleanupIconColumn));
 
         _driveColumn.DataPropertyName = nameof(CleanupSelectionRow.DriveName);
         _driveColumn.HeaderText = "盘符";
@@ -1244,10 +1244,10 @@ public sealed class MainForm : Form
         _overviewIconColumn.HeaderText = "图标";
         _overviewIconColumn.Width = MeasureGridColumnWidth("图标", 18);
         _overviewIconColumn.ReadOnly = true;
-        _overviewIconColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
+        _overviewIconColumn.ImageLayout = DataGridViewImageCellLayout.Normal;
         _overviewIconColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
         _overviewIconColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _overviewIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), GetCurrentIconSize());
+        _overviewIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), GetCurrentIconSize(_overviewGrid, _overviewIconColumn));
         _overviewGrid.Columns.Add(_overviewIconColumn);
 
         _overviewGrid.Columns.Add(new DataGridViewTextBoxColumn
@@ -1428,10 +1428,10 @@ public sealed class MainForm : Form
         _infrequentIconColumn.HeaderText = "图标";
         _infrequentIconColumn.Width = MeasureGridColumnWidth("图标", 18);
         _infrequentIconColumn.ReadOnly = true;
-        _infrequentIconColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
+        _infrequentIconColumn.ImageLayout = DataGridViewImageCellLayout.Normal;
         _infrequentIconColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
         _infrequentIconColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _infrequentIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultInfrequentApp(), GetCurrentIconSize());
+        _infrequentIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultInfrequentApp(), GetCurrentIconSize(_infrequentGrid, _infrequentIconColumn));
         _infrequentGrid.Columns.Add(_infrequentIconColumn);
 
         _infrequentGrid.Columns.Add(new DataGridViewTextBoxColumn
@@ -1905,7 +1905,7 @@ public sealed class MainForm : Form
     private void LoadInfrequentIcons(IReadOnlyCollection<InfrequentSoftwareEntry> entries, CancellationToken cancellationToken)
     {
         var refreshed = 0;
-        var iconSize = GetCurrentIconSize();
+        var iconSize = GetCurrentIconSize(_infrequentGrid, _infrequentIconColumn);
         foreach (var entry in entries)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -1934,7 +1934,7 @@ public sealed class MainForm : Form
     private void LoadCleanupIcons(IReadOnlyCollection<CleanupSelectionRow> rows, CancellationToken cancellationToken)
     {
         var refreshed = 0;
-        var iconSize = GetCurrentIconSize();
+        var iconSize = GetCurrentIconSize(_grid, _cleanupIconColumn);
         foreach (var row in rows)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -1964,7 +1964,7 @@ public sealed class MainForm : Form
     private void LoadOverviewIcons(IReadOnlyCollection<CDriveOverviewEntry> entries, CancellationToken cancellationToken)
     {
         var refreshed = 0;
-        var iconSize = GetCurrentIconSize();
+        var iconSize = GetCurrentIconSize(_overviewGrid, _overviewIconColumn);
         foreach (var entry in entries)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -5771,7 +5771,7 @@ public sealed class MainForm : Form
             return image;
         }
 
-        return ApplicationIconCache.GetIcon(ResolveCleanupIconRequest(row), GetCurrentIconSize());
+        return ApplicationIconCache.GetIcon(ResolveCleanupIconRequest(row), GetCurrentIconSize(_grid, _cleanupIconColumn));
     }
 
     private Image GetOverviewIcon(CDriveOverviewEntry entry)
@@ -5782,7 +5782,7 @@ public sealed class MainForm : Form
             return image;
         }
 
-        return ApplicationIconCache.GetIcon(ResolveOverviewIconRequest(entry), GetCurrentIconSize());
+        return ApplicationIconCache.GetIcon(ResolveOverviewIconRequest(entry), GetCurrentIconSize(_overviewGrid, _overviewIconColumn));
     }
 
     private static string BuildCleanupIconTooltip(CleanupSelectionRow row)
@@ -5805,14 +5805,14 @@ public sealed class MainForm : Form
     {
         var request = ResolveCleanupIconRequest(row);
         var primary = string.IsNullOrWhiteSpace(row.Path) ? row.Name : row.Path.Trim();
-        return $"{GetCurrentIconSize()}|{request.BuildCacheKey()}|{primary}";
+        return $"{GetCurrentIconSize(_grid, _cleanupIconColumn)}|{request.BuildCacheKey()}|{primary}";
     }
 
     private string GetOverviewIconKey(CDriveOverviewEntry entry)
     {
         var request = ResolveOverviewIconRequest(entry);
         var primary = string.IsNullOrWhiteSpace(entry.Path) ? entry.Name : entry.Path.Trim();
-        return $"{GetCurrentIconSize()}|{request.BuildCacheKey()}|{primary}";
+        return $"{GetCurrentIconSize(_overviewGrid, _overviewIconColumn)}|{request.BuildCacheKey()}|{primary}";
     }
 
     private static IconLookupRequest ResolveCleanupIconRequest(CleanupSelectionRow row)
@@ -6127,20 +6127,18 @@ public sealed class MainForm : Form
 
     private void RefreshIconColumnPresentation()
     {
-        var iconSize = GetCurrentIconSize();
-        var cleanupPlaceholder = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultCleanup(), iconSize);
-        var overviewPlaceholder = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), iconSize);
-        var appPlaceholder = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultInfrequentApp(), iconSize);
-        var iconColumnWidth = ResolveIconColumnWidth(iconSize);
+        var cleanupIconSize = GetCurrentIconSize(_grid, _cleanupIconColumn);
+        var overviewIconSize = GetCurrentIconSize(_overviewGrid, _overviewIconColumn);
+        var infrequentIconSize = GetCurrentIconSize(_infrequentGrid, _infrequentIconColumn);
 
-        _cleanupIconColumn.Width = iconColumnWidth;
-        _cleanupIconColumn.DefaultCellStyle.NullValue = cleanupPlaceholder;
+        _cleanupIconColumn.Width = ResolveIconColumnWidth(cleanupIconSize);
+        _cleanupIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultCleanup(), cleanupIconSize);
 
-        _overviewIconColumn.Width = iconColumnWidth;
-        _overviewIconColumn.DefaultCellStyle.NullValue = overviewPlaceholder;
+        _overviewIconColumn.Width = ResolveIconColumnWidth(overviewIconSize);
+        _overviewIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), overviewIconSize);
 
-        _infrequentIconColumn.Width = iconColumnWidth;
-        _infrequentIconColumn.DefaultCellStyle.NullValue = appPlaceholder;
+        _infrequentIconColumn.Width = ResolveIconColumnWidth(infrequentIconSize);
+        _infrequentIconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultInfrequentApp(), infrequentIconSize);
     }
 
     private void ReloadDynamicIconsForCurrentDpi()
@@ -6160,14 +6158,23 @@ public sealed class MainForm : Form
         QueueInfrequentIconLoad(_visibleInfrequentRows.ToList());
     }
 
-    private int GetCurrentIconSize()
+    private int GetCurrentIconSize(DataGridView grid, DataGridViewImageColumn column)
     {
-        return ApplicationIconCache.GetRecommendedIconSizeForDpi(DeviceDpi, logicalSize: 18);
+        var recommended = ApplicationIconCache.GetRecommendedIconSizeForDpi(DeviceDpi, logicalSize: 18);
+        var displayBudget = ResolveIconDisplayBudget(grid, column);
+        return ApplicationIconCache.GetRecommendedIconSize(Math.Min(recommended, displayBudget));
     }
 
     private static int ResolveIconColumnWidth(int iconSize)
     {
         return Math.Max(58, UiScaleHelper.MeasureGridColumnWidth("图标", 58, Math.Max(28, iconSize + 16)));
+    }
+
+    private static int ResolveIconDisplayBudget(DataGridView grid, DataGridViewImageColumn column)
+    {
+        var rowBudget = Math.Max(16, (grid.RowTemplate?.Height ?? 36) - 8);
+        var columnBudget = Math.Max(16, (column.Width > 0 ? column.Width : 58) - 16);
+        return Math.Min(rowBudget, columnBudget);
     }
 
     private static void ConfigureActionButton(Button button, string text, int minimumWidth, bool primary = false)

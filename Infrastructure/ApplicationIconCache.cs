@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -13,11 +14,15 @@ public static class ApplicationIconCache
     private const uint ShgsiIcon = 0x000000100;
     private const uint ShgsiLargeIcon = 0x000000000;
     private const uint ShgsiSmallIcon = 0x000000001;
+    private const uint ShgfiUseFileAttributes = 0x000000010;
+    private const uint FileAttributeDirectory = 0x00000010;
+    private const uint FileAttributeNormal = 0x00000080;
     private static readonly int[] SizeBuckets = [16, 20, 24, 32, 40, 48, 64, 128, 256];
 
     private static readonly ConcurrentDictionary<string, Image> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, Image> FallbackIcons = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Lazy<Icon> AppIcon = new(LoadApplicationIcon);
+    private static readonly string[] IconResourceExtensions = [".exe", ".dll", ".ico", ".icl", ".cpl", ".scr", ".mui"];
 
     public static Image GetSmallIcon(string? iconSourcePath, string? installRoot)
     {
@@ -38,14 +43,14 @@ public static class ApplicationIconCache
 
         foreach (var candidate in EnumerateCandidates(request))
         {
-            var normalized = NormalizeIconPath(candidate);
-            if (string.IsNullOrWhiteSpace(normalized) || (!File.Exists(normalized) && !Directory.Exists(normalized)))
+            if (string.IsNullOrWhiteSpace(candidate.NormalizedPath)
+                || (!File.Exists(candidate.NormalizedPath) && !Directory.Exists(candidate.NormalizedPath)))
             {
                 continue;
             }
 
-            var cacheKey = $"{cachePrefix}|{normalized}";
-            var image = Cache.GetOrAdd(cacheKey, _ => LoadImageFromPath(normalized, normalizedSize, request.SemanticKind, fallbackKind));
+            var cacheKey = $"{cachePrefix}|{candidate.CacheKey}";
+            var image = Cache.GetOrAdd(cacheKey, _ => LoadImageFromPath(candidate, normalizedSize, request.SemanticKind, fallbackKind));
             if (!ReferenceEquals(image, fallbackIcon))
             {
                 return image;
@@ -80,7 +85,7 @@ public static class ApplicationIconCache
         return GetRecommendedIconSize(scaledSize);
     }
 
-    private static IEnumerable<string> EnumerateCandidates(IconLookupRequest request)
+    private static IEnumerable<IconSourceCandidate> EnumerateCandidates(IconLookupRequest request)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -115,37 +120,58 @@ public static class ApplicationIconCache
         }
     }
 
-    private static bool TryAddCandidate(string? candidate, ISet<string> seen, out string normalized)
+    private static bool TryAddCandidate(string? candidate, ISet<string> seen, out IconSourceCandidate normalized)
     {
-        normalized = NormalizeIconPath(candidate);
-        return !string.IsNullOrWhiteSpace(normalized) && seen.Add(normalized);
+        normalized = ParseIconSourceCandidate(candidate);
+        return !string.IsNullOrWhiteSpace(normalized.NormalizedPath) && seen.Add(normalized.CacheKey);
     }
 
     private static Image LoadImageFromPath(
-        string normalizedPath,
+        IconSourceCandidate source,
         int size,
         IconSemanticKind semanticKind,
         FallbackIconKind fallbackKind)
     {
         try
         {
-            if (Directory.Exists(normalizedPath))
+            if (Directory.Exists(source.NormalizedPath))
             {
+                if (TryGetShellFileIcon(source.NormalizedPath, size, isDirectory: true, out var directoryIcon)
+                    && directoryIcon is not null)
+                {
+                    using (directoryIcon)
+                    {
+                        return CreateValidatedBitmap(directoryIcon, size, fallbackKind);
+                    }
+                }
+
                 return IsDirectorySemantic(semanticKind)
                     ? CreateBitmapFromStockIcon(fallbackKind, size)
                     : GetFallbackIcon(size, fallbackKind);
             }
 
-            if (normalizedPath.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
+            if (source.NormalizedPath.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
             {
-                using var ico = new Icon(normalizedPath, new Size(size, size));
+                using var ico = new Icon(source.NormalizedPath, new Size(size, size));
                 return CreateValidatedBitmap(ico, size, fallbackKind);
             }
 
-            using var icon = Icon.ExtractAssociatedIcon(normalizedPath);
-            if (icon is not null)
+            if (TryExtractShellResourceIcon(source, size, out var extractedIcon)
+                && extractedIcon is not null)
             {
-                return CreateValidatedBitmap(icon, size, fallbackKind);
+                using (extractedIcon)
+                {
+                    return CreateValidatedBitmap(extractedIcon, size, fallbackKind);
+                }
+            }
+
+            if (TryGetShellFileIcon(source.NormalizedPath, size, isDirectory: false, out var associatedIcon)
+                && associatedIcon is not null)
+            {
+                using (associatedIcon)
+                {
+                    return CreateValidatedBitmap(associatedIcon, size, fallbackKind);
+                }
             }
         }
         catch
@@ -221,14 +247,50 @@ public static class ApplicationIconCache
     private static Bitmap CreateBitmap(Icon icon, int size)
     {
         using var sourceBitmap = icon.ToBitmap();
-        var bitmap = new Bitmap(size, size);
+        if (sourceBitmap.Width == size && sourceBitmap.Height == size)
+        {
+            return CloneBitmap(sourceBitmap);
+        }
+
+        var bitmap = new Bitmap(size, size, PixelFormat.Format32bppPArgb);
         using var graphics = Graphics.FromImage(bitmap);
         graphics.Clear(Color.Transparent);
-        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        graphics.CompositingMode = CompositingMode.SourceOver;
+        graphics.CompositingQuality = CompositingQuality.HighQuality;
+        graphics.InterpolationMode = sourceBitmap.Width > size || sourceBitmap.Height > size
+            ? InterpolationMode.HighQualityBicubic
+            : InterpolationMode.NearestNeighbor;
         graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-        graphics.SmoothingMode = SmoothingMode.HighQuality;
-        graphics.DrawImage(sourceBitmap, new Rectangle(0, 0, size, size));
+        graphics.SmoothingMode = SmoothingMode.None;
+        var destination = GetDestinationRectangle(sourceBitmap.Size, size);
+        graphics.DrawImage(sourceBitmap, destination, new Rectangle(Point.Empty, sourceBitmap.Size), GraphicsUnit.Pixel);
         return bitmap;
+    }
+
+    private static Bitmap CloneBitmap(Bitmap source)
+    {
+        var clone = new Bitmap(source.Width, source.Height, PixelFormat.Format32bppPArgb);
+        using var graphics = Graphics.FromImage(clone);
+        graphics.Clear(Color.Transparent);
+        graphics.DrawImageUnscaled(source, Point.Empty);
+        return clone;
+    }
+
+    private static Rectangle GetDestinationRectangle(Size sourceSize, int targetSize)
+    {
+        if (sourceSize.Width <= targetSize && sourceSize.Height <= targetSize)
+        {
+            var offsetX = Math.Max(0, (targetSize - sourceSize.Width) / 2);
+            var offsetY = Math.Max(0, (targetSize - sourceSize.Height) / 2);
+            return new Rectangle(offsetX, offsetY, sourceSize.Width, sourceSize.Height);
+        }
+
+        var scale = Math.Min(targetSize / (double)sourceSize.Width, targetSize / (double)sourceSize.Height);
+        var width = Math.Max(1, (int)Math.Round(sourceSize.Width * scale));
+        var height = Math.Max(1, (int)Math.Round(sourceSize.Height * scale));
+        var x = Math.Max(0, (targetSize - width) / 2);
+        var y = Math.Max(0, (targetSize - height) / 2);
+        return new Rectangle(x, y, width, height);
     }
 
     private static bool HasVisiblePixels(Bitmap bitmap)
@@ -274,7 +336,7 @@ public static class ApplicationIconCache
     {
         foreach (var candidate in new[] { iconSourcePath, installRoot })
         {
-            var normalized = NormalizeIconPath(candidate);
+            var normalized = ParseIconSourceCandidate(candidate).NormalizedPath;
             if (string.IsNullOrWhiteSpace(normalized) || !Directory.Exists(normalized))
             {
                 continue;
@@ -318,6 +380,89 @@ public static class ApplicationIconCache
         }
     }
 
+    private static bool TryExtractShellResourceIcon(IconSourceCandidate source, int size, out Icon? icon)
+    {
+        icon = null;
+        if (string.IsNullOrWhiteSpace(source.NormalizedPath) || !File.Exists(source.NormalizedPath))
+        {
+            return false;
+        }
+
+        IntPtr largeIcon = IntPtr.Zero;
+        IntPtr smallIcon = IntPtr.Zero;
+        try
+        {
+            var packedSize = (uint)((size & 0xffff) | ((size & 0xffff) << 16));
+            var hr = SHDefExtractIcon(source.NormalizedPath, source.ResourceIndex, 0, out largeIcon, out smallIcon, packedSize);
+            var handle = largeIcon != IntPtr.Zero ? largeIcon : smallIcon;
+            if (hr < 0 || handle == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            using var extracted = Icon.FromHandle(handle);
+            icon = (Icon)extracted.Clone();
+            return true;
+        }
+        catch
+        {
+            icon = null;
+            return false;
+        }
+        finally
+        {
+            if (largeIcon != IntPtr.Zero)
+            {
+                DestroyIcon(largeIcon);
+            }
+
+            if (smallIcon != IntPtr.Zero && smallIcon != largeIcon)
+            {
+                DestroyIcon(smallIcon);
+            }
+        }
+    }
+
+    private static bool TryGetShellFileIcon(string path, int size, bool isDirectory, out Icon? icon)
+    {
+        icon = null;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var info = new SHFILEINFO();
+        var flags = ShgsiIcon
+            | (size <= SmallIconSize ? ShgsiSmallIcon : ShgsiLargeIcon)
+            | (isDirectory ? ShgfiUseFileAttributes : 0u);
+        var attributes = isDirectory ? FileAttributeDirectory : FileAttributeNormal;
+
+        try
+        {
+            var result = SHGetFileInfo(path, attributes, ref info, (uint)Marshal.SizeOf<SHFILEINFO>(), flags);
+            if (result == IntPtr.Zero || info.hIcon == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            using var shellIcon = Icon.FromHandle(info.hIcon);
+            icon = (Icon)shellIcon.Clone();
+            return true;
+        }
+        catch
+        {
+            icon = null;
+            return false;
+        }
+        finally
+        {
+            if (info.hIcon != IntPtr.Zero)
+            {
+                DestroyIcon(info.hIcon);
+            }
+        }
+    }
+
     private static SHSTOCKICONID GetStockIconId(FallbackIconKind kind)
     {
         return kind switch
@@ -336,27 +481,78 @@ public static class ApplicationIconCache
         };
     }
 
-    private static string NormalizeIconPath(string? rawPath)
+    private static IconSourceCandidate ParseIconSourceCandidate(string? rawPath)
     {
         if (string.IsNullOrWhiteSpace(rawPath))
         {
-            return string.Empty;
+            return default;
         }
 
-        var clean = rawPath.Trim().Trim('"');
-        var commaIndex = clean.IndexOf(',');
-        if (commaIndex > 0)
+        var clean = rawPath.Trim();
+        var resourceIndex = 0;
+        if (TrySplitIconResourceIndex(clean, out var pathWithoutIndex, out var parsedIndex))
         {
-            clean = clean[..commaIndex];
+            clean = pathWithoutIndex;
+            resourceIndex = parsedIndex;
         }
 
+        clean = Environment.ExpandEnvironmentVariables(clean.Trim().Trim('"'));
+        var normalized = NormalizePath(clean);
+        return string.IsNullOrWhiteSpace(normalized)
+            ? default
+            : new IconSourceCandidate(normalized, resourceIndex, $"{normalized}|{resourceIndex}");
+    }
+
+    private static bool TrySplitIconResourceIndex(string rawPath, out string pathWithoutIndex, out int resourceIndex)
+    {
+        pathWithoutIndex = rawPath.Trim();
+        resourceIndex = 0;
+
+        var commaIndex = rawPath.LastIndexOf(',');
+        if (commaIndex <= 0 || commaIndex >= rawPath.Length - 1)
+        {
+            return false;
+        }
+
+        var suffix = rawPath[(commaIndex + 1)..].Trim();
+        if (!int.TryParse(suffix, out resourceIndex))
+        {
+            resourceIndex = 0;
+            return false;
+        }
+
+        var candidatePath = rawPath[..commaIndex].Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(candidatePath) || !LooksLikeIconResourcePath(candidatePath))
+        {
+            resourceIndex = 0;
+            return false;
+        }
+
+        pathWithoutIndex = candidatePath;
+        return true;
+    }
+
+    private static bool LooksLikeIconResourcePath(string candidatePath)
+    {
+        if (File.Exists(candidatePath) || Directory.Exists(candidatePath) || Path.IsPathRooted(candidatePath))
+        {
+            return true;
+        }
+
+        var extension = Path.GetExtension(candidatePath);
+        return !string.IsNullOrWhiteSpace(extension)
+            && IconResourceExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizePath(string rawPath)
+    {
         try
         {
-            return Path.GetFullPath(clean).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return Path.GetFullPath(rawPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
         catch
         {
-            return clean.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return rawPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
     }
 
@@ -402,8 +598,44 @@ public static class ApplicationIconCache
         public string szPath;
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct SHFILEINFO
+    {
+        public IntPtr hIcon;
+        public int iIcon;
+        public uint dwAttributes;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string szDisplayName;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+        public string szTypeName;
+    }
+
+    private readonly record struct IconSourceCandidate(
+        string NormalizedPath,
+        int ResourceIndex,
+        string CacheKey);
+
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern int SHGetStockIconInfo(SHSTOCKICONID stockIconId, uint flags, ref SHSTOCKICONINFO stockIconInfo);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int SHDefExtractIcon(
+        string pszIconFile,
+        int iIndex,
+        uint uFlags,
+        out IntPtr phiconLarge,
+        out IntPtr phiconSmall,
+        uint nIconSize);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr SHGetFileInfo(
+        string pszPath,
+        uint dwFileAttributes,
+        ref SHFILEINFO psfi,
+        uint cbFileInfo,
+        uint uFlags);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

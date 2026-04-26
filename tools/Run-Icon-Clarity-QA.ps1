@@ -260,6 +260,10 @@ function Invoke-OneCycle {
     Save-WindowScreenshot -Handle $handle -OutputPath $smallShot
     $smallMetrics = Get-WindowMetrics -Handle $handle
 
+    Start-Sleep -Seconds 12
+    $settledShot = Join-Path $cycleRoot "04-settled.png"
+    Save-WindowScreenshot -Handle $handle -OutputPath $settledShot
+
     Start-Sleep -Seconds 1
     $closedNormally = Close-AppWindow -Process $windowProcess -Handle $handle
     $stillRunning = @(Get-Process | Where-Object {
@@ -285,6 +289,7 @@ function Invoke-OneCycle {
         LaunchScreenshot = $launchShot
         LargeScreenshot = $largeShot
         SmallScreenshot = $smallShot
+        SettledScreenshot = $settledShot
         Verdict = if (-not $closedNormally -or $stillRunning) { "FAIL" } else { "PASS_PENDING_VISUAL" }
     }
 

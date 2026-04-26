@@ -281,10 +281,10 @@ public sealed class CDriveSuggestionDialog : Form
         _iconColumn.HeaderText = "图标";
         _iconColumn.Width = UiScaleHelper.MeasureGridColumnWidth("图标", 58, 24);
         _iconColumn.ReadOnly = true;
-        _iconColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
+        _iconColumn.ImageLayout = DataGridViewImageCellLayout.Normal;
         _iconColumn.SortMode = DataGridViewColumnSortMode.NotSortable;
         _iconColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        _iconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), GetCurrentIconSize());
+        _iconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), GetCurrentIconSize(_grid, _iconColumn));
         _grid.Columns.Add(_iconColumn);
         _grid.Columns.Add(CreateTextColumn(nameof(MigrationCandidate.Name), "名称", 180));
         _grid.Columns.Add(CreateTextColumn(nameof(MigrationCandidate.SizeText), "体积", 96, alignRight: true));
@@ -724,7 +724,7 @@ public sealed class CDriveSuggestionDialog : Form
 
             _candidateIcons[key] = ApplicationIconCache.GetIcon(
                 ResolveCandidateIconRequest(candidate),
-                GetCurrentIconSize());
+                GetCurrentIconSize(_grid, _iconColumn));
             refreshed++;
             if (refreshed % 24 == 0)
             {
@@ -779,7 +779,7 @@ public sealed class CDriveSuggestionDialog : Form
             return image;
         }
 
-        return ApplicationIconCache.GetIcon(ResolveCandidateIconRequest(candidate), GetCurrentIconSize());
+        return ApplicationIconCache.GetIcon(ResolveCandidateIconRequest(candidate), GetCurrentIconSize(_grid, _iconColumn));
     }
 
     private static string BuildIconTooltip(MigrationCandidate candidate)
@@ -1002,14 +1002,17 @@ public sealed class CDriveSuggestionDialog : Form
 
     private void RefreshIconColumnPresentation()
     {
-        var iconSize = GetCurrentIconSize();
+        var iconSize = GetCurrentIconSize(_grid, _iconColumn);
         _iconColumn.Width = Math.Max(58, UiScaleHelper.MeasureGridColumnWidth("图标", 58, Math.Max(28, iconSize + 16)));
         _iconColumn.DefaultCellStyle.NullValue = ApplicationIconCache.GetIcon(IconSemanticResolver.DefaultOverview(), iconSize);
     }
 
-    private int GetCurrentIconSize()
+    private int GetCurrentIconSize(DataGridView grid, DataGridViewImageColumn column)
     {
-        return ApplicationIconCache.GetRecommendedIconSizeForDpi(DeviceDpi, logicalSize: 18);
+        var recommended = ApplicationIconCache.GetRecommendedIconSizeForDpi(DeviceDpi, logicalSize: 18);
+        var rowBudget = Math.Max(16, (grid.RowTemplate?.Height ?? 36) - 8);
+        var columnBudget = Math.Max(16, (column.Width > 0 ? column.Width : 58) - 16);
+        return ApplicationIconCache.GetRecommendedIconSize(Math.Min(recommended, Math.Min(rowBudget, columnBudget)));
     }
 
     private static void SetControlRedraw(Control control, bool enabled)

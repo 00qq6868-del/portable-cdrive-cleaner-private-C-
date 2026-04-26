@@ -1,0 +1,17 @@
+﻿{
+    "Cycle":  2,
+    "InstalledCopy":  "D:\\磁盘清理器\\磁盘清理器.exe",
+    "LaunchSeconds":  2.57,
+    "WindowDpi":  168,
+    "LargeWidth":  1380,
+    "LargeHeight":  930,
+    "SmallWidth":  1220,
+    "SmallHeight":  760,
+    "ClosedNormally":  true,
+    "ResidualProcess":  false,
+    "LaunchScreenshot":  "E:\\vscode Claude\\PortableCDriveCleaner\\artifacts\\icon-qa\\2026-04-27_015122\\cycle-02\\01-launch.png",
+    "LargeScreenshot":  "E:\\vscode Claude\\PortableCDriveCleaner\\artifacts\\icon-qa\\2026-04-27_015122\\cycle-02\\02-large.png",
+    "SmallScreenshot":  "E:\\vscode Claude\\PortableCDriveCleaner\\artifacts\\icon-qa\\2026-04-27_015122\\cycle-02\\03-small.png",
+    "SettledScreenshot":  "E:\\vscode Claude\\PortableCDriveCleaner\\artifacts\\icon-qa\\2026-04-27_015122\\cycle-02\\04-settled.png",
+    "Verdict":  "PASS_PENDING_VISUAL"
+}
