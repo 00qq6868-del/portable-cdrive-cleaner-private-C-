@@ -4,11 +4,11 @@
 - 项目名称：便携式磁盘清理器 / PortableCDriveCleaner
 - 技术栈：WinForms + .NET Windows 桌面程序
 - GitHub 私有仓库：`https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`
-- 本地源码目录：`E:\vscode Claude\PortableCDriveCleaner`
+- 本地源码目录：`<LOCAL_REPO_PATH>`
 - 当前分支：`main`
-- 实际安装目录：`D:\磁盘清理器`
-- 实际运行主程序：`D:\磁盘清理器\磁盘清理器.exe`
-- 当前桌面入口：`C:\Users\zero\Desktop\磁盘清理器.lnk`
+- 实际安装目录：`<INSTALL_DIR>`
+- 实际运行主程序：`<INSTALLED_EXE_PATH>`
+- 当前桌面入口：`<DESKTOP_SHORTCUT>`
 - 当前高权限计划任务：`磁盘清理器-高权限启动`
 
 ## 当前交付链
@@ -65,8 +65,9 @@
 
 ## 当前重要事实
 - 当前安装版时间戳：`2026-04-23 02:47:53`
-- 当前安装版路径：`D:\磁盘清理器\磁盘清理器.exe`
+- 当前安装版路径：`<INSTALLED_EXE_PATH>`
 - 当前项目没有 GitHub CLI，但 Git 远程已接通且可推送。
 - 仓库内保留了桌面脚本副本：
   - `tools/desktop-launchers/连接GitHub私有仓库.cmd`
   - `tools/desktop-launchers/保存当前进度到GitHub.cmd`
+

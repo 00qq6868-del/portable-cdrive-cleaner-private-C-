@@ -2,8 +2,8 @@
 
 ## 固定项目识别信息
 - GitHub 私有仓库：`https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`
-- 本地源码目录：`E:\vscode Claude\PortableCDriveCleaner`
-- 实际安装版：`D:\磁盘清理器\磁盘清理器.exe`
+- 本地源码目录：`<LOCAL_REPO_PATH>`
+- 实际安装版：`<INSTALLED_EXE_PATH>`
 - 当前项目类型：WinForms 桌面程序，不是 Web 项目
 
 ## 模板 1：GitHub 可访问接力模板
@@ -13,8 +13,8 @@
 
 项目固定信息：
 - GitHub 私有仓库：https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git
-- 本地源码目录：E:\vscode Claude\PortableCDriveCleaner
-- 实际安装版：D:\磁盘清理器\磁盘清理器.exe
+- 本地源码目录：<LOCAL_REPO_PATH>
+- 实际安装版：<INSTALLED_EXE_PATH>
 
 请严格按下面流程执行，不要跳步，不要假装已完成。
 
@@ -71,8 +71,8 @@ git pull --rebase origin main
 
 项目固定信息：
 - GitHub 私有仓库：https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git
-- 本地源码目录：E:\vscode Claude\PortableCDriveCleaner
-- 实际安装版：D:\磁盘清理器\磁盘清理器.exe
+- 本地源码目录：<LOCAL_REPO_PATH>
+- 实际安装版：<INSTALLED_EXE_PATH>
 
 如果你拿不到私有仓库，请不要假装已经读过。
 请明确告诉我：你现在需要我粘贴下面这些文件的完整内容，再继续接手：
@@ -121,3 +121,4 @@ powershell -ExecutionPolicy Bypass -File .\tools\Record-Checkpoint.ps1 -Mode Int
 - 改了哪些文件
 - 下一步必须先做什么
 ```
+

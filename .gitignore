@@ -3,8 +3,8 @@ obj/
 dist/
 publish/
 artifacts/*
-!artifacts/icon-qa/
-!artifacts/icon-qa/**
+artifacts/icon-qa/**
+artifacts/**/screenshots/**
 tempbuild/
 tempbuild-r0/
 tempbuild-r1/

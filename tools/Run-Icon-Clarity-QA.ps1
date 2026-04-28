@@ -1,9 +1,10 @@
 param(
     [int]$Cycles = 3,
-    [string]$PublishedExe = "E:\vscode Claude\PortableCDriveCleaner\publish\PortableCDriveCleaner-Windows\PortableCDriveCleaner.exe",
+    [string]$PublishedExe = "",
     [Parameter(Mandatory = $true)]
     [string]$InstalledExe,
-    [string]$PublishScript = "E:\vscode Claude\PortableCDriveCleaner\publish.ps1",
+    [string]$PublishScript = "",
+    [string]$OutputRoot = "",
     [int]$LaunchTimeoutSeconds = 45,
     [ValidateSet("CleanupCandidates", "CDriveOverview", "InfrequentApps")]
     [string]$QaView = "InfrequentApps"
@@ -11,6 +12,14 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($PublishedExe)) {
+    $PublishedExe = Join-Path $ProjectRoot "publish\PortableCDriveCleaner-Windows\PortableCDriveCleaner.exe"
+}
+
+if ([string]::IsNullOrWhiteSpace($PublishScript)) {
+    $PublishScript = Join-Path $ProjectRoot "publish.ps1"
+}
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
@@ -162,6 +171,23 @@ function Resize-AppWindow {
     [void][Win32Qa]::SetForegroundWindow($Handle)
     [void][Win32Qa]::MoveWindow($Handle, 20, 20, $Width, $Height, $true)
     Start-Sleep -Milliseconds 1000
+}
+
+function Exercise-ResizePath {
+    param([IntPtr]$Handle)
+
+    $sizes = @(
+        @{ Width = 1220; Height = 760 },
+        @{ Width = 1280; Height = 800 },
+        @{ Width = 1380; Height = 930 },
+        @{ Width = 1260; Height = 780 },
+        @{ Width = 1220; Height = 760 }
+    )
+
+    foreach ($size in $sizes) {
+        Resize-AppWindow -Handle $Handle -Width $size.Width -Height $size.Height
+        Start-Sleep -Milliseconds 350
+    }
 }
 
 function Save-WindowScreenshot {
@@ -339,6 +365,10 @@ function Invoke-OneCycle {
     Save-WindowScreenshot -Handle $handle -OutputPath $smallShot
     $smallMetrics = Get-WindowMetrics -Handle $handle
 
+    Exercise-ResizePath -Handle $handle
+    $resizeStressShot = Join-Path $cycleRoot "03b-resize-stress.png"
+    Save-WindowScreenshot -Handle $handle -OutputPath $resizeStressShot
+
     Start-Sleep -Seconds 12
     $settledShot = Join-Path $cycleRoot "04-settled.png"
     Save-WindowScreenshot -Handle $handle -OutputPath $settledShot
@@ -393,6 +423,7 @@ function Invoke-OneCycle {
         LaunchScreenshot = $launchShot
         LargeScreenshot = $largeShot
         SmallScreenshot = $smallShot
+        ResizeStressScreenshot = $resizeStressShot
         SettledScreenshot = $settledShot
         PopulatedLargeScreenshot = $populatedLargeShot
         PopulatedSmallScreenshot = $populatedSmallShot
@@ -404,7 +435,12 @@ function Invoke-OneCycle {
 }
 
 $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
-$outputRoot = Join-Path "E:\vscode Claude\PortableCDriveCleaner\artifacts\icon-qa" $timestamp
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $outputRoot = Join-Path (Join-Path $ProjectRoot "artifacts\icon-qa") $timestamp
+}
+else {
+    $outputRoot = $OutputRoot
+}
 Ensure-Directory -Path $outputRoot
 
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen

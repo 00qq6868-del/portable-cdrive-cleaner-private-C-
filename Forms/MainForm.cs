@@ -75,6 +75,7 @@ public sealed class MainForm : Form
     private readonly Label _driveSummaryLabel = new();
     private readonly Label _runtimeInfoLabel = new();
     private readonly FlowLayoutPanel _driveTabsFlow = new();
+    private readonly ComboBox _driveSelectorComboBox = new();
     private readonly Label _viewSummaryLabel = new();
     private readonly Label _selectionSummaryLabel = new();
     private readonly Label _selectionHintLabel = new();
@@ -402,6 +403,7 @@ public sealed class MainForm : Form
         UiThemePalette.ApplyComboBoxStyle(_categoryComboBox);
         UiThemePalette.ApplyComboBoxStyle(_modeComboBox);
         UiThemePalette.ApplyComboBoxStyle(_sortComboBox);
+        UiThemePalette.ApplyComboBoxStyle(_driveSelectorComboBox);
 
         UiThemePalette.ApplyButtonStyle(_scanButton, primary: false);
         UiThemePalette.ApplyButtonStyle(_recommendedButton, primary: false);
@@ -619,24 +621,59 @@ public sealed class MainForm : Form
     {
         _viewModePanel.AutoSize = true;
         _viewModePanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        _viewModePanel.Padding = new Padding(12, 8, 12, 8);
-        _viewModePanel.Margin = new Padding(0, 0, 0, 10);
+        _viewModePanel.Padding = new Padding(8, 5, 8, 5);
+        _viewModePanel.Margin = new Padding(0, 0, 0, 6);
         _rootLayout.Controls.Add(_viewModePanel, 0, 4);
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = Padding.Empty
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        _viewModePanel.Controls.Add(layout);
+
+        ConfigureDriveSelector();
+        layout.Controls.Add(_driveSelectorComboBox, 0, 0);
 
         _viewModeFlow.Dock = DockStyle.Fill;
         _viewModeFlow.AutoSize = true;
         _viewModeFlow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         _viewModeFlow.WrapContents = false;
         _viewModeFlow.Margin = Padding.Empty;
-        _viewModePanel.Controls.Add(_viewModeFlow);
+        layout.Controls.Add(_viewModeFlow, 1, 0);
 
-        ConfigureViewModeButton(_cleanupViewButton, "清理候选", MainViewMode.CleanupCandidates);
-        ConfigureViewModeButton(_overviewViewButton, "C盘总览", MainViewMode.CDriveOverview);
-        ConfigureViewModeButton(_infrequentViewButton, "长期未用软件", MainViewMode.InfrequentApps);
+        ConfigureViewModeButton(_cleanupViewButton, "候选", MainViewMode.CleanupCandidates);
+        ConfigureViewModeButton(_overviewViewButton, "总览", MainViewMode.CDriveOverview);
+        ConfigureViewModeButton(_infrequentViewButton, "未用软件", MainViewMode.InfrequentApps);
         _viewModeFlow.Controls.Add(_cleanupViewButton);
         _viewModeFlow.Controls.Add(_overviewViewButton);
         _viewModeFlow.Controls.Add(_infrequentViewButton);
         UpdateViewModeButtons();
+    }
+
+    private void ConfigureDriveSelector()
+    {
+        _driveSelectorComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        _driveSelectorComboBox.Width = 104;
+        _driveSelectorComboBox.Margin = new Padding(0, 0, 10, 0);
+        _driveSelectorComboBox.FlatStyle = FlatStyle.Flat;
+        _driveSelectorComboBox.SelectedIndexChanged += (_, _) =>
+        {
+            if (_suppressFilterEvents)
+            {
+                return;
+            }
+
+            _filterState.SelectedDrive = GetComboBoxValue(_driveSelectorComboBox);
+            ApplyCurrentView();
+        };
+        UiThemePalette.ApplyComboBoxStyle(_driveSelectorComboBox);
     }
 
     private void BuildToolbarRow()
@@ -657,11 +694,11 @@ public sealed class MainForm : Form
         };
         _toolbarPanel.Controls.Add(flow);
 
-        ConfigureActionButton(_scanButton, "重新扫描", 112);
+        ConfigureActionButton(_scanButton, "扫描", 64);
         _scanButton.Click += async (_, _) => await RefreshScanAsync();
         flow.Controls.Add(_scanButton);
 
-        ConfigureActionButton(_recommendedButton, "勾选建议", 118);
+        ConfigureActionButton(_recommendedButton, "建议", 64);
         _recommendedButton.Click += (_, _) =>
         {
             if (_viewMode == MainViewMode.InfrequentApps)
@@ -674,11 +711,11 @@ public sealed class MainForm : Form
         };
         flow.Controls.Add(_recommendedButton);
 
-        ConfigureActionButton(_cDriveAdviceButton, "C盘建议", 112);
+        ConfigureActionButton(_cDriveAdviceButton, "C盘建议", 82);
         _cDriveAdviceButton.Click += async (_, _) => await OpenCDriveAdviceAsync();
         flow.Controls.Add(_cDriveAdviceButton);
 
-        ConfigureActionButton(_cleanSelectedButton, "处理勾选", 132);
+        ConfigureActionButton(_cleanSelectedButton, "处理", 64);
         _cleanSelectedButton.Click += async (_, _) =>
         {
             var items = _viewMode == MainViewMode.InfrequentApps
@@ -688,7 +725,7 @@ public sealed class MainForm : Form
         };
         flow.Controls.Add(_cleanSelectedButton);
 
-        ConfigureActionButton(_safeCleanButton, "一键安全清理", 154, primary: true);
+        ConfigureActionButton(_safeCleanButton, "安全清理", 90, primary: true);
         _safeCleanButton.Click += async (_, _) =>
         {
             var items = _visibleRows
@@ -699,11 +736,11 @@ public sealed class MainForm : Form
         };
         flow.Controls.Add(_safeCleanButton);
 
-        ConfigureActionButton(_migrateSelectedButton, "开始迁移已勾选", 160);
+        ConfigureActionButton(_migrateSelectedButton, "迁移", 64);
         _migrateSelectedButton.Click += async (_, _) => await StartMigrationFlowAsync(GetSelectedMigrationCandidatesFromOverview());
         flow.Controls.Add(_migrateSelectedButton);
 
-        ConfigureActionButton(_deleteOverviewSelectedButton, "删除已勾选", 136);
+        ConfigureActionButton(_deleteOverviewSelectedButton, "删除", 64);
         _deleteOverviewSelectedButton.Click += async (_, _) =>
         {
             var cleanupItems = CreateCleanupItemsFromMigrationCandidates(GetSelectedDeletionCandidatesFromOverview());
@@ -711,11 +748,11 @@ public sealed class MainForm : Form
         };
         flow.Controls.Add(_deleteOverviewSelectedButton);
 
-        ConfigureActionButton(_scheduleSettingsButton, "自动清理", 118);
+        ConfigureActionButton(_scheduleSettingsButton, "自动", 64);
         _scheduleSettingsButton.Click += (_, _) => OpenScheduleSettings();
         flow.Controls.Add(_scheduleSettingsButton);
 
-        ConfigureActionButton(_whitelistButton, "加入白名单", 126);
+        ConfigureActionButton(_whitelistButton, "白名单", 78);
         _whitelistButton.Click += (_, _) => AddCurrentSelectionToWhitelist();
         flow.Controls.Add(_whitelistButton);
 
@@ -2150,7 +2187,8 @@ public sealed class MainForm : Form
     private void UpdateDriveTabs()
     {
         UpdateTeachingStrip();
-        _driveTabsFlow.Visible = _viewMode != MainViewMode.CDriveOverview;
+        UpdateDriveSelector();
+        _driveTabsFlow.Visible = false;
         if (_viewMode == MainViewMode.CDriveOverview)
         {
             ApplyDataFirstVisibility();
@@ -2187,6 +2225,42 @@ public sealed class MainForm : Form
         RefreshPillButtonSizing();
         _driveTabsFlow.ResumeLayout();
         ApplyDataFirstVisibility();
+    }
+
+    private void UpdateDriveSelector()
+    {
+        var statuses = _scanService.GetFixedDriveStatuses();
+        var drives = statuses.Select(status => status.Name)
+            .Where(IsSpecificDrive)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(GetDrivePriority)
+            .ThenBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        _suppressFilterEvents = true;
+        try
+        {
+            _driveSelectorComboBox.Items.Clear();
+            _driveSelectorComboBox.Items.Add(new FilterOption(DriveAllKey, "全部盘"));
+            foreach (var drive in drives)
+            {
+                _driveSelectorComboBox.Items.Add(new FilterOption(drive, $"{drive} 盘"));
+            }
+
+            if (!(_disableStartupRefresh && _viewMode == MainViewMode.InfrequentApps)
+                && drives.Count > 0
+                && string.Equals(_filterState.SelectedDrive, DriveAllKey, StringComparison.OrdinalIgnoreCase))
+            {
+                _filterState.SelectedDrive = drives.Contains("C", StringComparer.OrdinalIgnoreCase) ? "C" : drives[0];
+            }
+
+            SelectComboBoxValue(_driveSelectorComboBox, _filterState.SelectedDrive);
+            _driveSelectorComboBox.Visible = _viewMode != MainViewMode.CDriveOverview && _driveSelectorComboBox.Items.Count > 1;
+        }
+        finally
+        {
+            _suppressFilterEvents = false;
+        }
     }
 
     private void UpdateTeachingStrip()
@@ -4367,6 +4441,7 @@ public sealed class MainForm : Form
         _jobCenterPanel.Visible = compactSummaryOnly
             ? activeCount > 0
             : activeCount > 0 || state.Jobs.Count > 0;
+        _jobCenterLabel.Visible = true;
         _jobCenterLabel.Text = activeCount > 0
             ? $"后台任务：运行中 {state.RunningCount} 个，排队中 {state.QueuedCount} 个"
             : state.CompletedCount > 0
@@ -4388,9 +4463,11 @@ public sealed class MainForm : Form
         {
             var activeJob = state.Jobs.FirstOrDefault(job => job.State is OperationJobState.Running or OperationJobState.Queued)
                 ?? state.Jobs.FirstOrDefault();
+            _jobCenterLabel.Visible = !IsUltraCompactLayout;
             _jobCenterSummaryLabel.Text = activeJob is null
                 ? $"后台任务：运行 {state.RunningCount} / 排队 {state.QueuedCount}"
                 : BuildCompactJobSummary(activeJob);
+            _jobCenterSummaryLabel.Margin = IsUltraCompactLayout ? Padding.Empty : new Padding(0, 0, 0, 8);
             _jobCenterSummaryLabel.Visible = true;
             _jobListFlow.Visible = false;
             _toolTip.SetToolTip(_jobCenterSummaryLabel, activeJob is null
@@ -4402,6 +4479,7 @@ public sealed class MainForm : Form
         if (collapseCompleted)
         {
             var latestJob = state.Jobs.FirstOrDefault();
+            _jobCenterSummaryLabel.Margin = new Padding(0, 0, 0, 8);
             _jobCenterSummaryLabel.Text = latestJob is null
                 ? "最近后台任务已完成。"
                 : BuildCollapsedJobSummary(latestJob);
@@ -4818,22 +4896,20 @@ public sealed class MainForm : Form
 
     private void ApplyDataFirstVisibility()
     {
+        _driveTabsPanel.Visible = false;
+        _teachingPanel.Visible = false;
+        _teachingSecondaryLabel.Visible = false;
+
         if (IsUltraCompactLayout)
         {
-            // UltraCompact is a data-first mode: hide optional teaching/filter rows instead of starving the grid.
-            _driveTabsPanel.Visible = false;
+            // UltraCompact is a data-first mode: hide optional rows instead of starving the grid.
             _filtersPanel.Visible = false;
-            _teachingPanel.Visible = false;
-            _teachingSecondaryLabel.Visible = false;
             _selectionHintLabel.Visible = false;
             _quickFiltersHost.Visible = false;
             return;
         }
 
-        _driveTabsPanel.Visible = true;
         _filtersPanel.Visible = true;
-        _teachingPanel.Visible = true;
-        _teachingSecondaryLabel.Visible = !IsCompactLayout || GetDpiNormalizedClientHeight() > TeachingSecondaryHideHeightThreshold;
         _selectionHintLabel.Visible = !IsCompactLayout;
         _quickFiltersHost.Visible = _viewMode == MainViewMode.CleanupCandidates;
     }
@@ -5987,10 +6063,7 @@ public sealed class MainForm : Form
 
     private static string BuildCleanupIconTooltip(CleanupSelectionRow row)
     {
-        var iconSourcePath = ResolveCleanupIconSourcePath(row);
-        return string.IsNullOrWhiteSpace(iconSourcePath)
-            ? $"{row.Name}\r\n暂时没有识别到专属图标，先用通用图标显示。"
-            : $"{row.Name}\r\n图标来源：{iconSourcePath}";
+        return $"{row.Name}\r\n清理候选当前统一使用高清文件夹图标，先保证清晰和稳定。";
     }
 
     private static string BuildOverviewIconTooltip(CDriveOverviewEntry entry)
@@ -6017,9 +6090,9 @@ public sealed class MainForm : Form
 
     private static IconLookupRequest ResolveCleanupIconRequest(CleanupSelectionRow row)
     {
-        var iconSourcePath = ResolveCleanupIconSourcePath(row);
-        var installRoot = ResolveCleanupIconInstallRoot(row);
-        return IconSemanticResolver.ForCleanupRow(row, iconSourcePath, installRoot);
+        // 用户当前明确要求清理候选先稳定成“文件夹形式”的高清图标。
+        // 这里不再按临时文件/缓存/包等语义混用小图标，避免公开版继续出现低清和错乱兜底。
+        return new IconLookupRequest(null, null, IconSemanticKind.Directory);
     }
 
     private static IconLookupRequest ResolveOverviewIconRequest(CDriveOverviewEntry entry)
@@ -6186,7 +6259,7 @@ public sealed class MainForm : Form
         button.Click += (_, _) => SwitchView(viewMode);
         button.Margin = new Padding(0, 0, 8, 0);
         button.FlatStyle = FlatStyle.Flat;
-        UiScaleHelper.ApplyButtonSizing(button, text, 116, 36, minHeight: 38, verticalPadding: 16);
+        UiScaleHelper.ApplyButtonSizing(button, text, 68, 14, minHeight: 34, verticalPadding: 12);
     }
 
     private void UpdateViewModeButtons()
@@ -6211,15 +6284,15 @@ public sealed class MainForm : Form
         ApplyButtonFont(_whitelistButton, dense, ultra);
         ApplyButtonFont(_moreActionsButton, dense, ultra);
 
-        ApplyActionButtonSizing(_scanButton, "重新扫描", 112, dense, ultra);
-        ApplyActionButtonSizing(_recommendedButton, "勾选建议", 118, dense, ultra);
-        ApplyActionButtonSizing(_cDriveAdviceButton, "C盘建议", 112, dense, ultra);
-        ApplyActionButtonSizing(_cleanSelectedButton, "处理勾选", 132, dense, ultra);
-        ApplyActionButtonSizing(_safeCleanButton, "一键安全清理", 154, dense, ultra);
-        ApplyActionButtonSizing(_migrateSelectedButton, "开始迁移已勾选", 160, dense, ultra);
-        ApplyActionButtonSizing(_deleteOverviewSelectedButton, "删除已勾选", 136, dense, ultra);
-        ApplyActionButtonSizing(_scheduleSettingsButton, "自动清理", 118, dense, ultra);
-        ApplyActionButtonSizing(_whitelistButton, "加入白名单", 126, dense, ultra);
+        ApplyActionButtonSizing(_scanButton, "扫描", 64, dense, ultra);
+        ApplyActionButtonSizing(_recommendedButton, "建议", 64, dense, ultra);
+        ApplyActionButtonSizing(_cDriveAdviceButton, "C盘建议", 82, dense, ultra);
+        ApplyActionButtonSizing(_cleanSelectedButton, "处理", 64, dense, ultra);
+        ApplyActionButtonSizing(_safeCleanButton, "安全清理", 90, dense, ultra);
+        ApplyActionButtonSizing(_migrateSelectedButton, "迁移", 64, dense, ultra);
+        ApplyActionButtonSizing(_deleteOverviewSelectedButton, "删除", 64, dense, ultra);
+        ApplyActionButtonSizing(_scheduleSettingsButton, "自动", 64, dense, ultra);
+        ApplyActionButtonSizing(_whitelistButton, "白名单", 78, dense, ultra);
         ApplyActionButtonSizing(_moreActionsButton, "更多", 92, dense, ultra);
     }
 
@@ -6253,6 +6326,8 @@ public sealed class MainForm : Form
         ApplyButtonFont(_cleanupViewButton, dense, ultra);
         ApplyButtonFont(_overviewViewButton, dense, ultra);
         ApplyButtonFont(_infrequentViewButton, dense, ultra);
+        ApplyControlFont(_driveSelectorComboBox, ultra ? 8.35f : dense ? 8.7f : 9f);
+        _driveSelectorComboBox.Width = ultra ? 82 : dense ? 92 : 104;
         RefreshPillButtonSizing(_cleanupViewButton, compact: false, dense, ultra);
         RefreshPillButtonSizing(_overviewViewButton, compact: false, dense, ultra);
         RefreshPillButtonSizing(_infrequentViewButton, compact: false, dense, ultra);
@@ -6380,9 +6455,9 @@ public sealed class MainForm : Form
         button.AutoSize = false;
         button.Text = text;
         button.AutoEllipsis = false;
-        button.Padding = new Padding(18, 0, 18, 0);
+        button.Padding = new Padding(8, 0, 8, 0);
         ApplyActionButtonSizing(button, text, minimumWidth);
-        button.Margin = new Padding(0, 0, 10, 0);
+        button.Margin = new Padding(0, 0, 8, 0);
         button.TextAlign = ContentAlignment.MiddleCenter;
         UiThemePalette.ApplyButtonStyle(button, primary);
     }
@@ -6393,9 +6468,9 @@ public sealed class MainForm : Form
             button,
             text,
             minimumWidth,
-            ultraDense ? 38 : dense ? 44 : 56,
-            minHeight: ultraDense ? 32 : dense ? 36 : 42,
-            verticalPadding: ultraDense ? 8 : dense ? 12 : 18);
+            ultraDense ? 10 : dense ? 14 : 18,
+            minHeight: ultraDense ? 30 : dense ? 34 : 38,
+            verticalPadding: ultraDense ? 6 : dense ? 9 : 12);
     }
 
     private static void ConfigureFilterLabel(Label label, string text)
@@ -6458,10 +6533,10 @@ public sealed class MainForm : Form
     {
         var minimumWidth = compact
             ? (ultraDense ? 68 : dense ? 76 : 84)
-            : (ultraDense ? 78 : dense ? 86 : 96);
+            : (ultraDense ? 52 : dense ? 60 : 68);
         var horizontalPadding = compact
             ? (ultraDense ? 14 : dense ? 20 : 28)
-            : (ultraDense ? 20 : dense ? 28 : 36);
+            : (ultraDense ? 8 : dense ? 12 : 16);
         var minimumHeight = compact
             ? (ultraDense ? 26 : dense ? 30 : 34)
             : (ultraDense ? 28 : dense ? 32 : 36);

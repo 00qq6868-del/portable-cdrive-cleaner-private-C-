@@ -109,6 +109,8 @@ $optimizationLogPath = Join-Path $projectRoot "OPTIMIZATION_LOG.md"
 $interruptedPath = Join-Path $projectRoot "INTERRUPTED_PROGRESS.md"
 $checkpointDir = Join-Path $projectRoot "checkpoints"
 $saveHandoffPath = Join-Path $PSScriptRoot "Save-Handoff.ps1"
+$publicProjectRoot = "<LOCAL_REPO_PATH>"
+$publicInstallPath = "<INSTALLED_EXE_PATH>"
 
 if (-not (Test-Path $checkpointDir)) {
     New-Item -ItemType Directory -Path $checkpointDir | Out-Null
@@ -179,8 +181,8 @@ $pushStatus = if ($Push) { "push_requested" } else { "local_checkpoint_recorded"
 
 $state = [ordered]@{
     repo_url = $repoUrl
-    local_repo_path = $projectRoot
-    install_path = "D:\磁盘清理器\磁盘清理器.exe"
+    local_repo_path = $publicProjectRoot
+    install_path = $publicInstallPath
     current_phase = $existingPhase
     current_task = $currentTask
     task_status = $taskStatus
@@ -209,8 +211,8 @@ $checkpointContent = @"
 - 状态：$statusLabel
 - 仓库地址：$repoUrl
 - 分支：$branch
-- 本地路径：$projectRoot
-- 安装版：D:\磁盘清理器\磁盘清理器.exe
+- 本地路径：$publicProjectRoot
+- 安装版：$publicInstallPath
 - 最近已知提交：$lastCommit
 
 ## 当前任务
@@ -253,8 +255,8 @@ $modifiedBlock
 
 ## GitHub 连续记忆
 - 仓库地址：$repoUrl
-- 本地路径：$projectRoot
-- 安装版：D:\磁盘清理器\磁盘清理器.exe
+- 本地路径：$publicProjectRoot
+- 安装版：$publicInstallPath
 - 默认读取顺序：AI_STATE.json -> PROJECT_CONTEXT.md -> MEMORY.md -> CURRENT_TASK.md -> TODO_NOT_FIXED.md -> OPTIMIZATION_LOG.md -> HANDOVER_FOR_OTHER_AI.md -> SOURCE_CHANGE_LEDGER.md -> INTERRUPTED_PROGRESS.md -> AI_PROMPT_TEMPLATES.md -> GITHUB_SYNC_CHECKLIST.md
 "@
 

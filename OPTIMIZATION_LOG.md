@@ -272,7 +272,7 @@
 - 任务：下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
 - 检查点模式：Progress
 - 已完成：
-  - 已完成第一轮代码落地：移除进度 Marquee 与整窗 Refresh，增加后台任务节流，收口主窗缩放刷新与图标列重绘，接入纯黑主题与官方兜底图标，C盘建议/自动清理设置/问题结案清单改为单实例非模态；dotnet build 已通过，安装版已同步到 D:\磁盘清理器\磁盘清理器.exe（2026-04-24 22:32:15），发布时再次抓到旧进程占用问题。
+  - 已完成第一轮代码落地：移除进度 Marquee 与整窗 Refresh，增加后台任务节流，收口主窗缩放刷新与图标列重绘，接入纯黑主题与官方兜底图标，C盘建议/自动清理设置/问题结案清单改为单实例非模态；dotnet build 已通过，安装版已同步到 <INSTALLED_EXE_PATH>（2026-04-24 22:32:15），发布时再次抓到旧进程占用问题。
 - 修改文件：
 - Forms/OperationProgressDialog.cs
 - Forms/MainForm.cs
@@ -335,7 +335,7 @@
 - 任务：下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
 - 检查点模式：Progress
 - 已完成：
-  - 已完成第二轮代码收口并同步安装版：新增 ThemedButton / ThemedProgressBar，自绘按钮与静态进度条替换关键原生控件；主窗后台任务区改为低频被动刷新并减少整卡重排；图标兜底切到 Windows Shell 官方 stock icon；主窗小窗顶部继续压缩；dotnet build 通过，publish.ps1 已同步到 D:\磁盘清理器\磁盘清理器.exe（2026-04-24 23:28:16），且已完成一次启动冒烟验证。
+  - 已完成第二轮代码收口并同步安装版：新增 ThemedButton / ThemedProgressBar，自绘按钮与静态进度条替换关键原生控件；主窗后台任务区改为低频被动刷新并减少整卡重排；图标兜底切到 Windows Shell 官方 stock icon；主窗小窗顶部继续压缩；dotnet build 通过，publish.ps1 已同步到 <INSTALLED_EXE_PATH>（2026-04-24 23:28:16），且已完成一次启动冒烟验证。
 - 修改文件：
 - Forms/ThemedButton.cs
 - Forms/ThemedProgressBar.cs
@@ -373,7 +373,7 @@
 - 任务：下一轮收口：去闪动、缩放不卡、纯黑科技感、清晰图标、秒开感与跨 AI 持续记忆
 - 检查点模式：Progress
 - 已完成：
-  - 代码提交与文档状态已对齐：第二轮 UI 收口代码已以 commit afdca7f 推送到 main，当前安装版为 D:\磁盘清理器\磁盘清理器.exe（2026-04-24 23:28:16）；下一步继续以真实界面验收闪动、缩放、图标清晰度、小窗数据区与暗黑风格。
+  - 代码提交与文档状态已对齐：第二轮 UI 收口代码已以 commit afdca7f 推送到 main，当前安装版为 <INSTALLED_EXE_PATH>（2026-04-24 23:28:16）；下一步继续以真实界面验收闪动、缩放、图标清晰度、小窗数据区与暗黑风格。
 - 修改文件：
 - Forms/ThemedButton.cs
 - Forms/ThemedProgressBar.cs
@@ -468,7 +468,7 @@
 - 任务：下一轮收口：缩放止血 + 图标语义修正 + DPI 图标桶 + 纯黑主题收口
 - 检查点模式：Progress
 - 已完成：
-  - 已完成 MainForm 与 C盘建议 的缩放期重绘止血、图标语义链与 DPI 图标桶重构；新版多尺寸 App.ico 已生成并发布到安装版 D:\磁盘清理器\磁盘清理器.exe（2026-04-27 00:05:02）。首次发布再次命中旧进程占用，手动结束 PID 25460 后重试成功。
+  - 已完成 MainForm 与 C盘建议 的缩放期重绘止血、图标语义链与 DPI 图标桶重构；新版多尺寸 App.ico 已生成并发布到安装版 <INSTALLED_EXE_PATH>（2026-04-27 00:05:02）。首次发布再次命中旧进程占用，手动结束 PID 25460 后重试成功。
 - 修改文件：
 - Forms/MainForm.cs
 - Forms/CDriveSuggestionDialog.cs
@@ -504,7 +504,7 @@
 - 任务：图标高清显示与缩放清晰度专项验收
 - 检查点模式：Progress
 - 已完成：
-  - 已新增并跑通从安装开始的图标清晰度三轮 QA 脚本 tools/Run-Icon-Clarity-QA.ps1。真实安装路径 D:\磁盘清理器\磁盘清理器.exe 已完成 3 轮完整测试，当前机器 DPI 为 168（175%），三轮启动耗时 2.25s / 1.95s / 2.31s，三轮均正常关闭且无残留进程。最新证据目录为 artifacts/icon-qa/2026-04-27_012521。注意：自动化流程已通过，但图标是否达到桌面快捷方式级清晰度仍需结合截图做人眼验收，暂不宣称已修复完成。
+  - 已新增并跑通从安装开始的图标清晰度三轮 QA 脚本 tools/Run-Icon-Clarity-QA.ps1。真实安装路径 <INSTALLED_EXE_PATH> 已完成 3 轮完整测试，当前机器 DPI 为 168（175%），三轮启动耗时 2.25s / 1.95s / 2.31s，三轮均正常关闭且无残留进程。最新证据目录为 artifacts/icon-qa/2026-04-27_012521。注意：自动化流程已通过，但图标是否达到桌面快捷方式级清晰度仍需结合截图做人眼验收，暂不宣称已修复完成。
 - 修改文件：
 - .gitignore
 - tools/Run-Icon-Clarity-QA.ps1
@@ -569,7 +569,7 @@
 - 任务：图标高清显示与缩放清晰度专项验收
 - 检查点模式：Progress
 - 已完成：
-  - 已完成第二轮真实代码收口：ApplicationIconCache 已移除 ExtractAssociatedIcon 并改成资源索引感知的 Shell 提取链，MainForm 与 CDriveSuggestionDialog 的图标列已移除 Zoom 二次缩放，Run-Icon-Clarity-QA.ps1 已新增稳定态截图。dotnet build 已 0 警告通过，安装版 D:\磁盘清理器\磁盘清理器.exe 已重新发布，并完成 3 轮完整 QA，证据目录为 artifacts/icon-qa/2026-04-27_015122。当前不能宣称已修复完成：图标仍未通过桌面快捷方式级人眼验收，且 04-settled.png 暴露出控件叠影。
+  - 已完成第二轮真实代码收口：ApplicationIconCache 已移除 ExtractAssociatedIcon 并改成资源索引感知的 Shell 提取链，MainForm 与 CDriveSuggestionDialog 的图标列已移除 Zoom 二次缩放，Run-Icon-Clarity-QA.ps1 已新增稳定态截图。dotnet build 已 0 警告通过，安装版 <INSTALLED_EXE_PATH> 已重新发布，并完成 3 轮完整 QA，证据目录为 artifacts/icon-qa/2026-04-27_015122。当前不能宣称已修复完成：图标仍未通过桌面快捷方式级人眼验收，且 04-settled.png 暴露出控件叠影。
 - 修改文件：
 - 'Infrastructure/ApplicationIconCache.cs'
 - 'Forms/MainForm.cs'
@@ -615,7 +615,7 @@
 - 任务：图标高清显示与缩放清晰度专项验收
 - 检查点模式：Progress
 - 已完成：
-  - 已把第二轮图标清晰度源码修改与 QA 证据一并写回：ApplicationIconCache 已改为资源索引感知的 Shell 提取链，MainForm 与 CDriveSuggestionDialog 的图标列已移除 Zoom 二次缩放，Run-Icon-Clarity-QA.ps1 已新增稳定态截图。dotnet build 已 0 警告通过，安装版 D:\磁盘清理器\磁盘清理器.exe 已重新发布，并完成 3 轮完整 QA，证据目录为 artifacts/icon-qa/2026-04-27_015122。当前仍不能宣称完成：图标还没通过桌面快捷方式级人眼验收，且稳定态截图暴露出控件叠影。
+  - 已把第二轮图标清晰度源码修改与 QA 证据一并写回：ApplicationIconCache 已改为资源索引感知的 Shell 提取链，MainForm 与 CDriveSuggestionDialog 的图标列已移除 Zoom 二次缩放，Run-Icon-Clarity-QA.ps1 已新增稳定态截图。dotnet build 已 0 警告通过，安装版 <INSTALLED_EXE_PATH> 已重新发布，并完成 3 轮完整 QA，证据目录为 artifacts/icon-qa/2026-04-27_015122。当前仍不能宣称完成：图标还没通过桌面快捷方式级人眼验收，且稳定态截图暴露出控件叠影。
 - 修改文件：
 - Infrastructure/ApplicationIconCache.cs
 - Forms/MainForm.cs
@@ -776,7 +776,7 @@
 - 任务：商业级图标清晰度、缩放稳定、视觉质感闭环
 - 检查点模式：Progress
 - 已完成：
-  - 三轮安装版 QA 已执行并被硬门槛正确判 FAIL，证据目录 artifacts/icon-qa/2026-04-28_221402。失败原因：qa-state.json 未写出；进一步定位为 QA 状态文件路径位于 E:\vscode Claude 下含空格，Run-Icon-Clarity-QA.ps1 用 Start-Process 传参未对该路径做可靠引号处理，导致应用没有收到完整 --qa-state-file 路径。这是测试链问题，不能算产品视觉通过。下一步修复 QA 参数引号后重新跑完整三轮。
+  - 三轮安装版 QA 已执行并被硬门槛正确判 FAIL，证据目录 artifacts/icon-qa/2026-04-28_221402。失败原因：qa-state.json 未写出；进一步定位为 QA 状态文件路径位于 <LOCAL_WORKSPACE> 下含空格，Run-Icon-Clarity-QA.ps1 用 Start-Process 传参未对该路径做可靠引号处理，导致应用没有收到完整 --qa-state-file 路径。这是测试链问题，不能算产品视觉通过。下一步修复 QA 参数引号后重新跑完整三轮。
 - 修改文件：
 - artifacts/icon-qa/2026-04-28_221402
 - 剩余项：
@@ -794,7 +794,7 @@
 - 任务：商业级图标清晰度、缩放稳定、视觉质感闭环
 - 检查点模式：Progress
 - 已完成：
-  - 已修复 QA 启动参数引用：Run-Icon-Clarity-QA.ps1 新增 ConvertTo-CommandLineArgument，把 --qa-state-file 这类含空格路径转换为可靠的单行 ArgumentList，避免 E:\vscode Claude 路径被 Start-Process 拆开。下一步重新跑完整三轮安装版 QA，验证 qa-state.json 是否写出并通过行数硬门槛。
+  - 已修复 QA 启动参数引用：Run-Icon-Clarity-QA.ps1 新增 ConvertTo-CommandLineArgument，把 --qa-state-file 这类含空格路径转换为可靠的单行 ArgumentList，避免 <LOCAL_WORKSPACE> 路径被 Start-Process 拆开。下一步重新跑完整三轮安装版 QA，验证 qa-state.json 是否写出并通过行数硬门槛。
 - 修改文件：
 - tools/Run-Icon-Clarity-QA.ps1
 - 剩余项：
@@ -891,6 +891,39 @@
 - 继续压掉加载抖动和整窗重排，改完后必须构建、发布、安装版三轮 QA
 - 检查点文件：
   - checkpoints/2026-04-28_230837_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+
+
+## 2026-04-28 23:51:18
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：公开仓库脱敏 + 顶部压缩 + 盘符下拉 + 清理候选高清文件夹图标 + 人类行为 QA
+- 检查点模式：Progress
+- 已完成：
+  - 公开仓库已验证为 public；当前版本完成公开仓库敏感信息收口：移除 Git 索引中的原始 QA 截图/本机路径类 artifacts，文档路径脱敏，checkpoint 与 QA 脚本不再写死本机 workspace；Gitleaks 8.30.1 扫描 34 个提交未发现 secret。UI 继续优化：顶部新增小型盘符下拉，主视图按钮改为候选/总览/未用软件，工具按钮压缩到文字略宽，UltraCompact 加载任务区改为单行，清理候选统一使用高清文件夹图标。dotnet build 0 错误 0 警告通过；下一步发布安装版并跑三轮 QA。
+- 修改文件：
+- .gitignore
+- PUBLIC_REDACTION.md
+- Forms/MainForm.cs
+- tools/Run-Icon-Clarity-QA.ps1
+- tools/Record-Checkpoint.ps1
+- AI_STATE.json
+- CURRENT_TASK.md
+- OPTIMIZATION_LOG.md
+- SOURCE_CHANGE_LEDGER.md
+- TODO_NOT_FIXED.md
+- 剩余项：
+- 发布安装版并从安装开始跑 3 轮 QA
+- 人工检查小窗口顶部是否仍空得过多、按钮是否只比文字略宽
+- 检查清理候选高清文件夹图标是否稳定显示
+- 继续按商业级暗黑科技感深化视觉质感
+- 如需彻底移除历史截图路径，需要单独评估 Git 历史重写和强推
+- 检查点文件：
+  - checkpoints/2026-04-28_235118_progress.md
 - 是否请求推送：是
 - 结果：
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照

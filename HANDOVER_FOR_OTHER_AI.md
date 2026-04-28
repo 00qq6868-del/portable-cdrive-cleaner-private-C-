@@ -15,8 +15,8 @@
 ## 当前必须知道的事实
 - 这是 WinForms 项目，不是 Web 项目
 - GitHub 私有仓库：`https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git`
-- 源码目录：`E:\vscode Claude\PortableCDriveCleaner`
-- 实际安装版：`D:\磁盘清理器\磁盘清理器.exe`
+- 源码目录：`<LOCAL_REPO_PATH>`
+- 实际安装版：`<INSTALLED_EXE_PATH>`
 - 桌面入口通过计划任务 `磁盘清理器-高权限启动` 拉起
 - GitHub 持久记忆系统已经建立，后续不要再把聊天窗口当唯一记忆
 - 当前最新真实软件问题仍然是：
@@ -60,3 +60,4 @@
 ## 当前最应该继续的方向
 - 继续处理主窗口小窗布局
 - 目标不是“有一点改善”，而是“数据区明显变大，用户一眼就看出来”
+
