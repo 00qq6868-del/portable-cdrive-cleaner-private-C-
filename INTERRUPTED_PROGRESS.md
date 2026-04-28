@@ -1,26 +1,26 @@
 ﻿# 被打断时的进度快照
 
 ## 最近可恢复状态
-- 当前任务：商业级体验收口第三轮：真实图标验收、缩放叠影、小窗数据区
+- 当前任务：商业级图标清晰度、缩放稳定、视觉质感闭环
 - 当前状态：进行中
 - 当前阶段：历史问题收口 + 主窗口小窗布局继续收口
-- 本次摘要：继续修正 QA 有效性：QA 模式现在保留完整缓存快照并禁用启动后台刷新，避免真实图标列表被部分扫描快照替换成 0 项；截图脚本改用 PrintWindow 优先抓目标窗口本身，避免 VS Code 或其它前台窗口遮挡污染截图。dotnet build 已通过。上一组 2026-04-28_212820 证明小窗顶部明显缩短，但截图和数据源仍不够可信，需要重新三轮 QA。
-- 最近检查点：checkpoints/2026-04-28_213804_progress.md
+- 本次摘要：接续执行用户明确的闭环计划：当前发现启动缓存读取真实根因是 ScanSnapshot 内 IReadOnlySet<Guid> 反序列化失败，导致缓存文件存在但无法加载，真实图标列表不稳定且启动慢。Services/SnapshotCacheService.cs 已有 DTO 转换修复草案，上一组 QA 证据 artifacts/icon-qa/2026-04-28_213823 已生成但只证明机械流程通过，不能作为视觉通过。此检查点先保存未验证源码与 QA 证据，防止中断丢失；后续必须 build、缓存读取验证、QA 硬门槛、发布安装版、三轮 QA。
+- 最近检查点：checkpoints/2026-04-28_220919_progress.md
 
 ## 已完成到哪一步
-- 继续修正 QA 有效性：QA 模式现在保留完整缓存快照并禁用启动后台刷新，避免真实图标列表被部分扫描快照替换成 0 项；截图脚本改用 PrintWindow 优先抓目标窗口本身，避免 VS Code 或其它前台窗口遮挡污染截图。dotnet build 已通过。上一组 2026-04-28_212820 证明小窗顶部明显缩短，但截图和数据源仍不够可信，需要重新三轮 QA。
+- 接续执行用户明确的闭环计划：当前发现启动缓存读取真实根因是 ScanSnapshot 内 IReadOnlySet<Guid> 反序列化失败，导致缓存文件存在但无法加载，真实图标列表不稳定且启动慢。Services/SnapshotCacheService.cs 已有 DTO 转换修复草案，上一组 QA 证据 artifacts/icon-qa/2026-04-28_213823 已生成但只证明机械流程通过，不能作为视觉通过。此检查点先保存未验证源码与 QA 证据，防止中断丢失；后续必须 build、缓存读取验证、QA 硬门槛、发布安装版、三轮 QA。
 
 ## 当前做到一半的内容
-- 重新运行安装版 3 轮 QA；确认 49 项长期未用软件真实图标是否出现；检查 PrintWindow 截图是否不再被其它窗口遮挡；进行人眼视觉验收并记录是否仍需继续深化
+- dotnet build；验证 scan-snapshot.json 能读出 Cleanup=124 Overview=84 Infrequent=49；让 QA 空列表直接失败；发布安装版；重新跑 3 轮 QA；人工检查截图；写回最终状态
 
 ## 当前还没完成的部分
-- 重新运行安装版 3 轮 QA；确认 49 项长期未用软件真实图标是否出现；检查 PrintWindow 截图是否不再被其它窗口遮挡；进行人眼视觉验收并记录是否仍需继续深化
+- dotnet build；验证 scan-snapshot.json 能读出 Cleanup=124 Overview=84 Infrequent=49；让 QA 空列表直接失败；发布安装版；重新跑 3 轮 QA；人工检查截图；写回最终状态
 
 ## 当前已改的文件
-- Forms/MainForm.cs;Program.cs;tools/Run-Icon-Clarity-QA.ps1;artifacts/icon-qa/2026-04-28_212820
+- Services/SnapshotCacheService.cs;artifacts/icon-qa/2026-04-28_213823
 
 ## 如果现在继续，下一步先做什么
-- 重新运行安装版 3 轮 QA；确认 49 项长期未用软件真实图标是否出现；检查 PrintWindow 截图是否不再被其它窗口遮挡；进行人眼视觉验收并记录是否仍需继续深化
+- dotnet build；验证 scan-snapshot.json 能读出 Cleanup=124 Overview=84 Infrequent=49；让 QA 空列表直接失败；发布安装版；重新跑 3 轮 QA；人工检查截图；写回最终状态
 
 ## 说明
 - 当前任务未被新的中断覆盖，本文件保留最近一次可直接恢复的状态。
