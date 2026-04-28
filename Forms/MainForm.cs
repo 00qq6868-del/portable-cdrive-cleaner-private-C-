@@ -48,6 +48,7 @@ public sealed class MainForm : Form
     private readonly bool _readOnlyMode;
     private readonly bool _preserveStartupView;
     private readonly bool _persistWindowState;
+    private readonly bool _disableStartupRefresh;
 
     private readonly TableLayoutPanel _rootLayout = new();
     private readonly Panel _headerPanel = CreateSurfacePanel();
@@ -197,7 +198,8 @@ public sealed class MainForm : Form
         string runtimeInfoToolTip = "",
         MainViewMode? startupViewOverride = null,
         bool preserveStartupView = false,
-        bool persistWindowState = true)
+        bool persistWindowState = true,
+        bool disableStartupRefresh = false)
     {
         _context = context;
         _settingsService = settingsService;
@@ -212,6 +214,7 @@ public sealed class MainForm : Form
         _readOnlyMode = readOnlyMode;
         _preserveStartupView = preserveStartupView;
         _persistWindowState = persistWindowState;
+        _disableStartupRefresh = disableStartupRefresh;
         _viewMode = startupViewOverride ?? (Enum.TryParse<MainViewMode>(_settings.LastViewMode, out var savedViewMode)
             ? savedViewMode
             : MainViewMode.CleanupCandidates);
@@ -291,6 +294,12 @@ public sealed class MainForm : Form
         Shown += async (_, _) =>
         {
             RefreshScaledUi(forceLayout: true);
+            if (_disableStartupRefresh && initialSnapshot is not null)
+            {
+                SetStatusMessage("QA 模式：已保留完整缓存快照，不启动后台刷新。");
+                return;
+            }
+
             if (initialSnapshot is null || initialSnapshot.CleanupItems.Count == 0)
             {
                 QueueScanRefresh(userInitiated: false);

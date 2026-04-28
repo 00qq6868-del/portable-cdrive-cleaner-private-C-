@@ -163,7 +163,8 @@ internal static class Program
             launchDiagnostics.ToolTipText,
             startupViewOverride: options.QaViewMode,
             preserveStartupView: options.QaViewMode.HasValue,
-            persistWindowState: !options.QaViewMode.HasValue));
+            persistWindowState: !options.QaViewMode.HasValue,
+            disableStartupRefresh: options.QaViewMode.HasValue));
     }
 
     private static bool IsInstallerLaunch(PortableContext context, CommandLineOptions options)

@@ -180,7 +180,22 @@ function Save-WindowScreenshot {
     $bitmap = New-Object System.Drawing.Bitmap $width, $height
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     try {
-        $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+        [void][Win32Qa]::ShowWindow($Handle, [Win32Qa]::SW_RESTORE)
+        [void][Win32Qa]::SetForegroundWindow($Handle)
+        Start-Sleep -Milliseconds 200
+        $hdc = $graphics.GetHdc()
+        $printed = $false
+        try {
+            $printed = [Win32Qa]::PrintWindow($Handle, $hdc, 2)
+        }
+        finally {
+            $graphics.ReleaseHdc($hdc)
+        }
+
+        if (-not $printed) {
+            $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+        }
+
         $bitmap.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
     }
     finally {

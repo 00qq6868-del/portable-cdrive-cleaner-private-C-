@@ -5,18 +5,18 @@
     "current_phase":  "历史问题收口 + 主窗口小窗布局继续收口",
     "current_task":  "商业级体验收口第三轮：真实图标验收、缩放叠影、小窗数据区",
     "task_status":  "in_progress",
-    "last_completed_step":  "发现并修正第三轮关键根因：175% DPI 下布局密度阈值直接使用 ClientSize.Height，导致视觉小窗仍被当成大窗，UltraCompact 未触发，教学/筛选/盘符/任务卡没有折叠。已改为按 DeviceDpi 把 ClientSize.Height 归一化到 96DPI 后再判断 Regular/Compact/UltraCompact，并通过 dotnet build。上一轮 QA 截图因此不能算通过，需要重新跑三轮安装版 QA。",
-    "in_progress_step":  "重新运行安装版 3 轮 QA；检查小窗是否真正隐藏次要行并显示更多数据；检查真实图标列表是否可见；检查缩放稳定态是否还有叠影",
-    "next_step":  "重新运行安装版 3 轮 QA；检查小窗是否真正隐藏次要行并显示更多数据；检查真实图标列表是否可见；检查缩放稳定态是否还有叠影",
+    "last_completed_step":  "继续修正 QA 有效性：QA 模式现在保留完整缓存快照并禁用启动后台刷新，避免真实图标列表被部分扫描快照替换成 0 项；截图脚本改用 PrintWindow 优先抓目标窗口本身，避免 VS Code 或其它前台窗口遮挡污染截图。dotnet build 已通过。上一组 2026-04-28_212820 证明小窗顶部明显缩短，但截图和数据源仍不够可信，需要重新三轮 QA。",
+    "in_progress_step":  "重新运行安装版 3 轮 QA；确认 49 项长期未用软件真实图标是否出现；检查 PrintWindow 截图是否不再被其它窗口遮挡；进行人眼视觉验收并记录是否仍需继续深化",
+    "next_step":  "重新运行安装版 3 轮 QA；确认 49 项长期未用软件真实图标是否出现；检查 PrintWindow 截图是否不再被其它窗口遮挡；进行人眼视觉验收并记录是否仍需继续深化",
     "pending_items":  [
-                          "重新运行安装版 3 轮 QA；检查小窗是否真正隐藏次要行并显示更多数据；检查真实图标列表是否可见；检查缩放稳定态是否还有叠影"
+                          "重新运行安装版 3 轮 QA；确认 49 项长期未用软件真实图标是否出现；检查 PrintWindow 截图是否不再被其它窗口遮挡；进行人眼视觉验收并记录是否仍需继续深化"
                       ],
     "modified_files":  [
-                           "Forms/MainForm.cs"
+                           "Forms/MainForm.cs;Program.cs;tools/Run-Icon-Clarity-QA.ps1;artifacts/icon-qa/2026-04-28_212820"
                        ],
-    "last_checkpoint_time":  "2026-04-28 21:27:51",
-    "last_commit":  "835ce1d",
+    "last_checkpoint_time":  "2026-04-28 21:38:04",
+    "last_commit":  "3c9edfc",
     "push_status":  "push_requested",
     "branch":  "main",
-    "latest_checkpoint":  "checkpoints/2026-04-28_212751_progress.md"
+    "latest_checkpoint":  "checkpoints/2026-04-28_213804_progress.md"
 }
