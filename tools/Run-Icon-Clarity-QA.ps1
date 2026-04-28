@@ -238,6 +238,28 @@ function Get-WindowMetrics {
     }
 }
 
+function Wait-QAStateFile {
+    param(
+        [string]$Path,
+        [int]$TimeoutSeconds = 10
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        if (Test-Path -LiteralPath $Path) {
+            try {
+                return Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
+            }
+            catch {
+            }
+        }
+
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    return $null
+}
+
 function Invoke-OneCycle {
     param(
         [int]$CycleIndex,
@@ -255,7 +277,8 @@ function Invoke-OneCycle {
     Reinstall-PortableBuild -SourceExe $SourceExe -TargetExe $TargetExe -PublishScriptPath $PublishScriptPath
 
     $launchStarted = Get-Date
-    $launchArgs = @("--readonly", "--skip-migration-prompt", "--qa-view", $QaViewMode)
+    $qaStateFile = Join-Path $cycleRoot "qa-state.json"
+    $launchArgs = @("--readonly", "--skip-migration-prompt", "--qa-view", $QaViewMode, "--qa-state-file", $qaStateFile)
     $process = Start-Process -FilePath $TargetExe -ArgumentList $launchArgs -PassThru
     $windowProcess = Wait-AppMainWindowProcess -InstalledExePath $TargetExe -TimeoutSeconds $TimeoutSeconds
     if ($null -eq $windowProcess) {
@@ -265,6 +288,28 @@ function Invoke-OneCycle {
 
     $launchSeconds = [Math]::Round(((Get-Date) - $launchStarted).TotalSeconds, 2)
     Start-Sleep -Seconds 6
+    $qaState = Wait-QAStateFile -Path $qaStateFile
+    $qaFailures = New-Object System.Collections.Generic.List[string]
+    if ($null -eq $qaState) {
+        $qaFailures.Add("QA state file was not written.")
+    }
+    else {
+        if ($qaState.ActiveView -ne $QaViewMode) {
+            $qaFailures.Add(("Expected QA view {0}, got {1}." -f $QaViewMode, $qaState.ActiveView))
+        }
+
+        if ([int]$qaState.ActiveVisibleRows -lt 3) {
+            $qaFailures.Add(("Expected at least 3 active visible rows, got {0}." -f $qaState.ActiveVisibleRows))
+        }
+
+        if ($QaViewMode -eq "InfrequentApps" -and [int]$qaState.SnapshotInfrequentRows -lt 3) {
+            $qaFailures.Add(("Expected cached infrequent-app rows, got {0}." -f $qaState.SnapshotInfrequentRows))
+        }
+
+        if ([int]$qaState.ContentHeight -lt 180) {
+            $qaFailures.Add(("Expected content area height >= 180, got {0}." -f $qaState.ContentHeight))
+        }
+    }
 
     $launchShot = Join-Path $cycleRoot "01-launch.png"
     Save-WindowScreenshot -Handle $handle -OutputPath $launchShot
@@ -324,6 +369,9 @@ function Invoke-OneCycle {
         PopulatedSmallHeight = $populatedSmallMetrics.Height
         QaView = $QaViewMode
         LaunchArguments = $launchArgs
+        QaStateFile = $qaStateFile
+        QaState = $qaState
+        QaFailures = $qaFailures.ToArray()
         ClosedNormally = $closedNormally
         ResidualProcess = $stillRunning
         LaunchScreenshot = $launchShot
@@ -332,7 +380,7 @@ function Invoke-OneCycle {
         SettledScreenshot = $settledShot
         PopulatedLargeScreenshot = $populatedLargeShot
         PopulatedSmallScreenshot = $populatedSmallShot
-        Verdict = if (-not $closedNormally -or $stillRunning) { "FAIL" } else { "PASS_PENDING_VISUAL" }
+        Verdict = if (-not $closedNormally -or $stillRunning -or $qaFailures.Count -gt 0) { "FAIL" } else { "PASS_PENDING_VISUAL" }
     }
 
     ($result | ConvertTo-Json -Depth 4) | Set-Content -Path (Join-Path $cycleRoot "result.json") -Encoding UTF8
@@ -374,6 +422,7 @@ $summary = [pscustomobject]@{
     QaView = $QaView
     Results = $resultItems
     AllCyclesClosedCleanly = (@($resultItems | Where-Object { -not $_.ClosedNormally -or $_.ResidualProcess }).Count -eq 0)
+    AllCyclesPassedHardGate = (@($resultItems | Where-Object { $_.Verdict -eq "FAIL" }).Count -eq 0)
     VisualReviewRequired = $true
 }
 

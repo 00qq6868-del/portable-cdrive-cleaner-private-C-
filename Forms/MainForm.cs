@@ -49,6 +49,7 @@ public sealed class MainForm : Form
     private readonly bool _preserveStartupView;
     private readonly bool _persistWindowState;
     private readonly bool _disableStartupRefresh;
+    private readonly string? _qaStateFilePath;
 
     private readonly TableLayoutPanel _rootLayout = new();
     private readonly Panel _headerPanel = CreateSurfacePanel();
@@ -199,7 +200,8 @@ public sealed class MainForm : Form
         MainViewMode? startupViewOverride = null,
         bool preserveStartupView = false,
         bool persistWindowState = true,
-        bool disableStartupRefresh = false)
+        bool disableStartupRefresh = false,
+        string? qaStateFilePath = null)
     {
         _context = context;
         _settingsService = settingsService;
@@ -215,6 +217,7 @@ public sealed class MainForm : Form
         _preserveStartupView = preserveStartupView;
         _persistWindowState = persistWindowState;
         _disableStartupRefresh = disableStartupRefresh;
+        _qaStateFilePath = string.IsNullOrWhiteSpace(qaStateFilePath) ? null : qaStateFilePath;
         _viewMode = startupViewOverride ?? (Enum.TryParse<MainViewMode>(_settings.LastViewMode, out var savedViewMode)
             ? savedViewMode
             : MainViewMode.CleanupCandidates);
@@ -294,9 +297,10 @@ public sealed class MainForm : Form
         Shown += async (_, _) =>
         {
             RefreshScaledUi(forceLayout: true);
-            if (_disableStartupRefresh && initialSnapshot is not null)
+            if (_disableStartupRefresh)
             {
                 SetStatusMessage("QA 模式：已保留完整缓存快照，不启动后台刷新。");
+                await WriteQaStateFileAfterDelayAsync("startup-cache-preserved");
                 return;
             }
 
@@ -5389,6 +5393,86 @@ public sealed class MainForm : Form
         public int LastAppliedWidth { get; set; } = -1;
         public bool LastCompactLayout { get; set; }
         public bool LastUltraCompactLayout { get; set; }
+    }
+
+    private async Task WriteQaStateFileAfterDelayAsync(string stage)
+    {
+        if (string.IsNullOrWhiteSpace(_qaStateFilePath))
+        {
+            return;
+        }
+
+        await Task.Delay(1200);
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        WriteQaStateFile(stage);
+    }
+
+    private void WriteQaStateFile(string stage)
+    {
+        if (string.IsNullOrWhiteSpace(_qaStateFilePath))
+        {
+            return;
+        }
+
+        try
+        {
+            var directory = Path.GetDirectoryName(_qaStateFilePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var activeGrid = GetActiveContentControl() as DataGridView;
+            var activeVisibleRows = _viewMode switch
+            {
+                MainViewMode.CDriveOverview => _visibleOverviewRows.Count,
+                MainViewMode.InfrequentApps => _visibleInfrequentRows.Count,
+                _ => _visibleRows.Count
+            };
+
+            var state = new
+            {
+                WrittenAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                Stage = stage,
+                ActiveView = _viewMode.ToString(),
+                LayoutDensity = _layoutDensityMode.ToString(),
+                DeviceDpi,
+                ClientWidth = ClientSize.Width,
+                ClientHeight = ClientSize.Height,
+                DpiNormalizedClientHeight = GetDpiNormalizedClientHeight(),
+                ActiveVisibleRows = activeVisibleRows,
+                CleanupRows = _visibleRows.Count,
+                OverviewRows = _visibleOverviewRows.Count,
+                InfrequentRows = _visibleInfrequentRows.Count,
+                ActiveGridRows = activeGrid?.Rows.Count ?? 0,
+                ActiveGridDisplayed = activeGrid?.Visible == true && activeGrid.IsHandleCreated,
+                HeaderVisible = _headerPanel.Visible,
+                JobCenterVisible = _jobCenterPanel.Visible,
+                ViewModeVisible = _viewModePanel.Visible,
+                ToolbarVisible = _toolbarPanel.Visible,
+                DriveTabsVisible = _driveTabsPanel.Visible,
+                FiltersVisible = _filtersPanel.Visible,
+                TeachingVisible = _teachingPanel.Visible,
+                SummaryVisible = _summaryPanel.Visible,
+                ContentHeight = _contentPanel.Height,
+                SnapshotCleanupRows = _snapshot?.CleanupItems.Count ?? 0,
+                SnapshotOverviewRows = _snapshot?.CDriveOverviewEntries.Count ?? 0,
+                SnapshotInfrequentRows = _snapshot?.InfrequentSoftwareEntries.Count ?? 0,
+                SnapshotPhase = _snapshot?.PhaseLabel ?? string.Empty
+            };
+
+            File.WriteAllText(_qaStateFilePath, JsonSerializer.Serialize(state, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            }));
+        }
+        catch
+        {
+        }
     }
 
     private void OnUiThread(Action action)

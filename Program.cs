@@ -164,7 +164,8 @@ internal static class Program
             startupViewOverride: options.QaViewMode,
             preserveStartupView: options.QaViewMode.HasValue,
             persistWindowState: !options.QaViewMode.HasValue,
-            disableStartupRefresh: options.QaViewMode.HasValue));
+            disableStartupRefresh: options.QaViewMode.HasValue,
+            qaStateFilePath: options.QaStateFile));
     }
 
     private static bool IsInstallerLaunch(PortableContext context, CommandLineOptions options)

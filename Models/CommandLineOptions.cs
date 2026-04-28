@@ -11,6 +11,7 @@ public sealed class CommandLineOptions
     public bool NoPrompt { get; init; }
     public string? SelectionFile { get; init; }
     public MainViewMode? QaViewMode { get; init; }
+    public string? QaStateFile { get; init; }
 
     public static CommandLineOptions Parse(string[] args)
     {
@@ -22,6 +23,7 @@ public sealed class CommandLineOptions
         var autoSafeOnly = false;
         var noPrompt = false;
         string? selectionFile = null;
+        string? qaStateFile = null;
         MainViewMode? qaViewMode = null;
 
         for (var i = 0; i < args.Length; i++)
@@ -62,6 +64,12 @@ public sealed class CommandLineOptions
                         qaViewMode = parsedQaViewMode;
                     }
                     break;
+                case "--qa-state-file":
+                    if (i + 1 < args.Length)
+                    {
+                        qaStateFile = args[++i];
+                    }
+                    break;
             }
         }
 
@@ -75,7 +83,8 @@ public sealed class CommandLineOptions
             AutoSafeOnly = autoSafeOnly,
             NoPrompt = noPrompt,
             SelectionFile = selectionFile,
-            QaViewMode = qaViewMode
+            QaViewMode = qaViewMode,
+            QaStateFile = qaStateFile
         };
     }
 }

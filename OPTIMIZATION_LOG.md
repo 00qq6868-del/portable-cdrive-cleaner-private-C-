@@ -752,3 +752,21 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-28 22:13:35
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：商业级图标清晰度、缩放稳定、视觉质感闭环
+- 检查点模式：Progress
+- 已完成：
+  - 已完成缓存读取修复与 QA 硬门槛代码：SnapshotCacheService 通过 DTO 成功读取现有 scan-snapshot.json，已用实际服务验证读出 Cleanup=124、Overview=84、Infrequent=49；新增 --qa-state-file，MainForm 会写 qa-state.json；Run-Icon-Clarity-QA.ps1 会检查 ActiveView、ActiveVisibleRows、SnapshotInfrequentRows、ContentHeight，空列表不再算 PASS_PENDING_VISUAL。dotnet build 已 0 错误 0 警告通过。尚未完成发布安装版与三轮 QA。
+- 修改文件：
+- Services/SnapshotCacheService.cs;Models/CommandLineOptions.cs;Program.cs;Forms/MainForm.cs;tools/Run-Icon-Clarity-QA.ps1
+- 剩余项：
+- 运行 publish.ps1；运行 3 轮安装版 QA；检查 qa-state.json 是否显示 InfrequentRows=49 且 ActiveVisibleRows>=3；人工检查截图图标清晰度、小窗数据区、缩放叠影；写回最终状态
+- 检查点文件：
+  - checkpoints/2026-04-28_221335_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
