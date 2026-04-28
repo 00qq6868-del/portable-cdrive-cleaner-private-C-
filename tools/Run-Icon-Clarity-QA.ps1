@@ -260,6 +260,20 @@ function Wait-QAStateFile {
     return $null
 }
 
+function ConvertTo-CommandLineArgument {
+    param([string]$Value)
+
+    if ($null -eq $Value) {
+        return '""'
+    }
+
+    if ($Value -notmatch '[\s"]') {
+        return $Value
+    }
+
+    return '"' + ($Value -replace '\\(?=")', '$0' -replace '"', '\"') + '"'
+}
+
 function Invoke-OneCycle {
     param(
         [int]$CycleIndex,
@@ -279,7 +293,8 @@ function Invoke-OneCycle {
     $launchStarted = Get-Date
     $qaStateFile = Join-Path $cycleRoot "qa-state.json"
     $launchArgs = @("--readonly", "--skip-migration-prompt", "--qa-view", $QaViewMode, "--qa-state-file", $qaStateFile)
-    $process = Start-Process -FilePath $TargetExe -ArgumentList $launchArgs -PassThru
+    $launchArgumentLine = ($launchArgs | ForEach-Object { ConvertTo-CommandLineArgument $_ }) -join " "
+    $process = Start-Process -FilePath $TargetExe -ArgumentList $launchArgumentLine -PassThru
     $windowProcess = Wait-AppMainWindowProcess -InstalledExePath $TargetExe -TimeoutSeconds $TimeoutSeconds
     if ($null -eq $windowProcess) {
         throw ("Cycle {0}: main window not found within {1} seconds." -f $CycleIndex, $TimeoutSeconds)
@@ -369,6 +384,7 @@ function Invoke-OneCycle {
         PopulatedSmallHeight = $populatedSmallMetrics.Height
         QaView = $QaViewMode
         LaunchArguments = $launchArgs
+        LaunchArgumentLine = $launchArgumentLine
         QaStateFile = $qaStateFile
         QaState = $qaState
         QaFailures = $qaFailures.ToArray()

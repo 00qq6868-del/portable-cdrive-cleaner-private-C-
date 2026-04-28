@@ -788,3 +788,21 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-28 22:22:16
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：商业级图标清晰度、缩放稳定、视觉质感闭环
+- 检查点模式：Progress
+- 已完成：
+  - 已修复 QA 启动参数引用：Run-Icon-Clarity-QA.ps1 新增 ConvertTo-CommandLineArgument，把 --qa-state-file 这类含空格路径转换为可靠的单行 ArgumentList，避免 E:\vscode Claude 路径被 Start-Process 拆开。下一步重新跑完整三轮安装版 QA，验证 qa-state.json 是否写出并通过行数硬门槛。
+- 修改文件：
+- tools/Run-Icon-Clarity-QA.ps1
+- 剩余项：
+- 重新跑 3 轮 QA；检查 qa-state.json；检查截图；记录结果
+- 检查点文件：
+  - checkpoints/2026-04-28_222216_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
