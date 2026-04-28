@@ -656,3 +656,27 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-28 21:07:52
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：商业级体验收口第三轮：真实图标验收、缩放叠影、小窗数据区
+- 检查点模式：Start
+- 已完成：
+  - 开始第三轮商业级体验收口：补强 QA 让它稳定切到真实列表图标视图并截图；主窗 UltraCompact 下进一步隐藏教学冗余，把空间还给数据区；缩放稳定后强制一次完整重绘，压掉稳定态控件叠影。完成后必须重新构建、发布安装版并跑 3 轮完整 QA。
+- 修改文件：
+- CURRENT_TASK.md
+- INTERRUPTED_PROGRESS.md
+- OPTIMIZATION_LOG.md
+- AI_STATE.json
+- 剩余项：
+- 真实列表图标区仍需稳定截图验收
+- 04-settled.png 暴露出控件叠影和缩放/重绘残留问题
+- 小窗顶部仍占高过多影响商业质感和数据可见性
+- 仍需安装版三轮 QA 验证
+- 检查点文件：
+  - checkpoints/2026-04-28_210752_start.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
