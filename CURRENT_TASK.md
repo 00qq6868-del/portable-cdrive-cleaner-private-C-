@@ -4,16 +4,16 @@
 - 当前阶段：历史问题收口 + 主窗口小窗布局继续收口
 - 当前任务：商业级图标清晰度、缩放稳定、视觉质感闭环
 - 状态：进行中
-- 最近完成：已完成缓存读取修复与 QA 硬门槛代码：SnapshotCacheService 通过 DTO 成功读取现有 scan-snapshot.json，已用实际服务验证读出 Cleanup=124、Overview=84、Infrequent=49；新增 --qa-state-file，MainForm 会写 qa-state.json；Run-Icon-Clarity-QA.ps1 会检查 ActiveView、ActiveVisibleRows、SnapshotInfrequentRows、ContentHeight，空列表不再算 PASS_PENDING_VISUAL。dotnet build 已 0 错误 0 警告通过。尚未完成发布安装版与三轮 QA。
-- 当前进行中：运行 publish.ps1；运行 3 轮安装版 QA；检查 qa-state.json 是否显示 InfrequentRows=49 且 ActiveVisibleRows>=3；人工检查截图图标清晰度、小窗数据区、缩放叠影；写回最终状态
-- 下一步：运行 publish.ps1；运行 3 轮安装版 QA；检查 qa-state.json 是否显示 InfrequentRows=49 且 ActiveVisibleRows>=3；人工检查截图图标清晰度、小窗数据区、缩放叠影；写回最终状态
-- 最近检查点：checkpoints/2026-04-28_221335_progress.md
+- 最近完成：三轮安装版 QA 已执行并被硬门槛正确判 FAIL，证据目录 artifacts/icon-qa/2026-04-28_221402。失败原因：qa-state.json 未写出；进一步定位为 QA 状态文件路径位于 E:\vscode Claude 下含空格，Run-Icon-Clarity-QA.ps1 用 Start-Process 传参未对该路径做可靠引号处理，导致应用没有收到完整 --qa-state-file 路径。这是测试链问题，不能算产品视觉通过。下一步修复 QA 参数引号后重新跑完整三轮。
+- 当前进行中：修复 Run-Icon-Clarity-QA.ps1 的 Start-Process 参数引号；重新 build；重新跑 3 轮 QA；确认 qa-state.json 写出并行数 >= 3；人工检查截图
+- 下一步：修复 Run-Icon-Clarity-QA.ps1 的 Start-Process 参数引号；重新 build；重新跑 3 轮 QA；确认 qa-state.json 写出并行数 >= 3；人工检查截图
+- 最近检查点：checkpoints/2026-04-28_222124_progress.md
 
 ## 当前未完成
-- 运行 publish.ps1；运行 3 轮安装版 QA；检查 qa-state.json 是否显示 InfrequentRows=49 且 ActiveVisibleRows>=3；人工检查截图图标清晰度、小窗数据区、缩放叠影；写回最终状态
+- 修复 Run-Icon-Clarity-QA.ps1 的 Start-Process 参数引号；重新 build；重新跑 3 轮 QA；确认 qa-state.json 写出并行数 >= 3；人工检查截图
 
 ## 当前关键文件
-- Services/SnapshotCacheService.cs;Models/CommandLineOptions.cs;Program.cs;Forms/MainForm.cs;tools/Run-Icon-Clarity-QA.ps1
+- artifacts/icon-qa/2026-04-28_221402
 
 ## GitHub 连续记忆
 - 仓库地址：https://github.com/00qq6868-del/portable-cdrive-cleaner-private-C-.git
