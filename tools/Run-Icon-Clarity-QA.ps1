@@ -7,7 +7,8 @@ param(
     [string]$OutputRoot = "",
     [int]$LaunchTimeoutSeconds = 45,
     [ValidateSet("CleanupCandidates", "CDriveOverview", "InfrequentApps")]
-    [string]$QaView = "InfrequentApps"
+    [string]$QaView = "InfrequentApps",
+    [switch]$AllowStartupRefresh
 )
 
 Set-StrictMode -Version Latest
@@ -286,6 +287,48 @@ function Wait-QAStateFile {
     return $null
 }
 
+function Get-JsonPropertyValue {
+    param(
+        [object]$Object,
+        [string]$Name,
+        [object]$DefaultValue = $null
+    )
+
+    if ($null -eq $Object) {
+        return $DefaultValue
+    }
+
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return $DefaultValue
+    }
+
+    return $property.Value
+}
+
+function Add-ScreenshotHealthFailures {
+    param(
+        [System.Collections.Generic.List[string]]$Failures,
+        [string[]]$ScreenshotPaths
+    )
+
+    foreach ($screenshotPath in $ScreenshotPaths) {
+        if ([string]::IsNullOrWhiteSpace($screenshotPath)) {
+            continue
+        }
+
+        if (-not (Test-Path -LiteralPath $screenshotPath)) {
+            $Failures.Add("Screenshot missing: $screenshotPath")
+            continue
+        }
+
+        $length = (Get-Item -LiteralPath $screenshotPath).Length
+        if ($length -lt 12000) {
+            $Failures.Add(("Screenshot too small to trust: {0} ({1} bytes)." -f $screenshotPath, $length))
+        }
+    }
+}
+
 function ConvertTo-CommandLineArgument {
     param([string]$Value)
 
@@ -309,7 +352,8 @@ function Invoke-OneCycle {
         [string]$PublishScriptPath,
         [int]$TimeoutSeconds,
         [string]$OutputRoot,
-        [string]$QaViewMode
+        [string]$QaViewMode,
+        [bool]$AllowStartupRefresh
     )
 
     $cycleRoot = Join-Path $OutputRoot ("cycle-" + $CycleIndex.ToString("00"))
@@ -319,6 +363,9 @@ function Invoke-OneCycle {
     $launchStarted = Get-Date
     $qaStateFile = Join-Path $cycleRoot "qa-state.json"
     $launchArgs = @("--readonly", "--skip-migration-prompt", "--qa-view", $QaViewMode, "--qa-state-file", $qaStateFile)
+    if ($AllowStartupRefresh) {
+        $launchArgs += "--qa-refresh"
+    }
     $launchArgumentLine = ($launchArgs | ForEach-Object { ConvertTo-CommandLineArgument $_ }) -join " "
     $process = Start-Process -FilePath $TargetExe -ArgumentList $launchArgumentLine -PassThru
     $windowProcess = Wait-AppMainWindowProcess -InstalledExePath $TargetExe -TimeoutSeconds $TimeoutSeconds
@@ -328,7 +375,14 @@ function Invoke-OneCycle {
     $handle = [IntPtr]$windowProcess.MainWindowHandle
 
     $launchSeconds = [Math]::Round(((Get-Date) - $launchStarted).TotalSeconds, 2)
-    Start-Sleep -Seconds 6
+    $loadingScreenshots = New-Object System.Collections.Generic.List[string]
+    for ($loadingIndex = 0; $loadingIndex -lt 10; $loadingIndex++) {
+        $loadingShot = Join-Path $cycleRoot ("00-loading-" + $loadingIndex.ToString("00") + ".png")
+        Save-WindowScreenshot -Handle $handle -OutputPath $loadingShot
+        $loadingScreenshots.Add($loadingShot)
+        Start-Sleep -Milliseconds 900
+    }
+
     $qaState = Wait-QAStateFile -Path $qaStateFile
     $qaFailures = New-Object System.Collections.Generic.List[string]
     if ($null -eq $qaState) {
@@ -349,6 +403,26 @@ function Invoke-OneCycle {
 
         if ([int]$qaState.ContentHeight -lt 180) {
             $qaFailures.Add(("Expected content area height >= 180, got {0}." -f $qaState.ContentHeight))
+        }
+
+        $contentHeightRatio = [double](Get-JsonPropertyValue -Object $qaState -Name "ContentHeightRatio" -DefaultValue 0)
+        if ($contentHeightRatio -lt 0.55) {
+            $qaFailures.Add(("Expected content height ratio >= 0.55, got {0}." -f $contentHeightRatio))
+        }
+
+        $maxViewButtonExcess = [int](Get-JsonPropertyValue -Object $qaState -Name "MaxViewButtonExcess" -DefaultValue 0)
+        if ($maxViewButtonExcess -gt 46) {
+            $qaFailures.Add(("View mode buttons are still too wide: max excess {0}px." -f $maxViewButtonExcess))
+        }
+
+        $maxViewButtonRatio = [double](Get-JsonPropertyValue -Object $qaState -Name "MaxViewButtonRatio" -DefaultValue 0)
+        if ($maxViewButtonRatio -gt 2.8) {
+            $qaFailures.Add(("View mode buttons are still oversized: max ratio {0}." -f $maxViewButtonRatio))
+        }
+
+        $maxActionButtonExcess = [int](Get-JsonPropertyValue -Object $qaState -Name "MaxActionButtonExcess" -DefaultValue 0)
+        if ($maxActionButtonExcess -gt 62) {
+            $qaFailures.Add(("Toolbar buttons are still too wide: max excess {0}px." -f $maxActionButtonExcess))
         }
     }
 
@@ -386,6 +460,17 @@ function Invoke-OneCycle {
     Save-WindowScreenshot -Handle $handle -OutputPath $populatedSmallShot
     $populatedSmallMetrics = Get-WindowMetrics -Handle $handle
 
+    Add-ScreenshotHealthFailures -Failures $qaFailures -ScreenshotPaths @(
+        $loadingScreenshots.ToArray()
+        $launchShot
+        $largeShot
+        $smallShot
+        $resizeStressShot
+        $settledShot
+        $populatedLargeShot
+        $populatedSmallShot
+    )
+
     Start-Sleep -Seconds 1
     $closedNormally = Close-AppWindow -Process $windowProcess -Handle $handle
     $stillRunning = @(Get-Process | Where-Object {
@@ -420,6 +505,7 @@ function Invoke-OneCycle {
         QaFailures = $qaFailures.ToArray()
         ClosedNormally = $closedNormally
         ResidualProcess = $stillRunning
+        LoadingScreenshots = $loadingScreenshots.ToArray()
         LaunchScreenshot = $launchShot
         LargeScreenshot = $largeShot
         SmallScreenshot = $smallShot
@@ -457,12 +543,13 @@ $environmentReport = [pscustomobject]@{
     InstalledExe = $InstalledExe
     PublishScript = $PublishScript
     QaView = $QaView
+    AllowStartupRefresh = [bool]$AllowStartupRefresh
 }
 $environmentReport | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $outputRoot "environment.json") -Encoding UTF8
 
 $results = New-Object System.Collections.Generic.List[object]
 for ($i = 1; $i -le $Cycles; $i++) {
-    $results.Add((Invoke-OneCycle -CycleIndex $i -SourceExe $PublishedExe -TargetExe $InstalledExe -ExpectedTitle "" -PublishScriptPath $PublishScript -TimeoutSeconds $LaunchTimeoutSeconds -OutputRoot $outputRoot -QaViewMode $QaView))
+    $results.Add((Invoke-OneCycle -CycleIndex $i -SourceExe $PublishedExe -TargetExe $InstalledExe -ExpectedTitle "" -PublishScriptPath $PublishScript -TimeoutSeconds $LaunchTimeoutSeconds -OutputRoot $outputRoot -QaViewMode $QaView -AllowStartupRefresh ([bool]$AllowStartupRefresh)))
 }
 
 $resultItems = $results.ToArray()
@@ -472,6 +559,7 @@ $summary = [pscustomobject]@{
     OutputRoot = $outputRoot
     Cycles = $Cycles
     QaView = $QaView
+    AllowStartupRefresh = [bool]$AllowStartupRefresh
     Results = $resultItems
     AllCyclesClosedCleanly = (@($resultItems | Where-Object { -not $_.ClosedNormally -or $_.ResidualProcess }).Count -eq 0)
     AllCyclesPassedHardGate = (@($resultItems | Where-Object { $_.Verdict -eq "FAIL" }).Count -eq 0)

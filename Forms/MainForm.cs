@@ -61,6 +61,7 @@ public sealed class MainForm : Form
     private readonly Panel _jobCenterPanel = new();
     private readonly Label _jobCenterLabel = new();
     private readonly Label _jobCenterSummaryLabel = new();
+    private readonly ThemedProgressBar _jobCenterCompactProgressBar = new();
     private readonly FlowLayoutPanel _jobListFlow = new();
     private readonly Label _resultBannerLabel = new();
     private readonly LinkLabel _resultBannerLink = new();
@@ -177,7 +178,9 @@ public sealed class MainForm : Form
     private bool _pendingCleanupIconColumnRefresh;
     private bool _pendingOverviewIconColumnRefresh;
     private bool _pendingInfrequentIconColumnRefresh;
+    private bool _scanStabilityMode;
     private Control? _activeContentControl;
+    private ScanSnapshot? _deferredVisibleScanSnapshot;
     private LayoutDensityMode _layoutDensityMode;
     private bool IsWideMode => WindowState == FormWindowState.Maximized || ClientSize.Width >= WideModeThreshold;
     private bool IsCompactLayout => _layoutDensityMode != LayoutDensityMode.Regular;
@@ -298,6 +301,8 @@ public sealed class MainForm : Form
         Shown += async (_, _) =>
         {
             RefreshScaledUi(forceLayout: true);
+            FlushPendingVisualRefreshes();
+            ForceCleanRepaintAfterResize();
             if (_disableStartupRefresh)
             {
                 SetStatusMessage("QA 模式：已保留完整缓存快照，不启动后台刷新。");
@@ -308,12 +313,14 @@ public sealed class MainForm : Form
             if (initialSnapshot is null || initialSnapshot.CleanupItems.Count == 0)
             {
                 QueueScanRefresh(userInitiated: false);
+                await WriteQaStateFileAfterDelayAsync("startup-refresh-queued");
                 return;
             }
 
             SetStatusMessage("已回填上次扫描结果，后台正在刷新最新候选...");
             await Task.Delay(120);
             QueueScanRefresh(userInitiated: false);
+            await WriteQaStateFileAfterDelayAsync("startup-refresh-queued");
         };
     }
 
@@ -449,7 +456,8 @@ public sealed class MainForm : Form
         _headerTitleLabel.Font = new Font("Microsoft YaHei UI", 15, FontStyle.Bold);
         _headerTitleLabel.Margin = new Padding(0, 0, 16, 4);
         _headerTitleLabel.ForeColor = Color.FromArgb(25, 40, 54);
-        _headerTitleLabel.Text = _settings.AppName;
+        _headerTitleLabel.Text = "磁盘清理器";
+        _toolTip.SetToolTip(_headerTitleLabel, _settings.AppName);
         layout.Controls.Add(_headerTitleLabel, 0, 0);
 
         _headerModeLabel.AutoSize = true;
@@ -584,9 +592,10 @@ public sealed class MainForm : Form
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 1,
-            RowCount = 3
+            RowCount = 4
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -604,6 +613,12 @@ public sealed class MainForm : Form
         _jobCenterSummaryLabel.Visible = false;
         layout.Controls.Add(_jobCenterSummaryLabel, 0, 1);
 
+        _jobCenterCompactProgressBar.Dock = DockStyle.Top;
+        _jobCenterCompactProgressBar.Height = 7;
+        _jobCenterCompactProgressBar.Margin = new Padding(0, 2, 0, 0);
+        _jobCenterCompactProgressBar.Visible = false;
+        layout.Controls.Add(_jobCenterCompactProgressBar, 0, 2);
+
         _jobListFlow.AutoSize = true;
         _jobListFlow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         _jobListFlow.Dock = DockStyle.Top;
@@ -611,7 +626,7 @@ public sealed class MainForm : Form
         _jobListFlow.WrapContents = false;
         _jobListFlow.Margin = Padding.Empty;
         UiThemePalette.EnableDoubleBuffering(_jobListFlow);
-        layout.Controls.Add(_jobListFlow, 0, 2);
+        layout.Controls.Add(_jobListFlow, 0, 3);
 
         _jobCenterPanel.Resize += (_, _) => HandleJobCardWidthRefreshRequest();
         _jobListFlow.Resize += (_, _) => HandleJobCardWidthRefreshRequest();
@@ -694,11 +709,11 @@ public sealed class MainForm : Form
         };
         _toolbarPanel.Controls.Add(flow);
 
-        ConfigureActionButton(_scanButton, "扫描", 64);
+        ConfigureActionButton(_scanButton, "扫描", 50);
         _scanButton.Click += async (_, _) => await RefreshScanAsync();
         flow.Controls.Add(_scanButton);
 
-        ConfigureActionButton(_recommendedButton, "建议", 64);
+        ConfigureActionButton(_recommendedButton, "建议", 50);
         _recommendedButton.Click += (_, _) =>
         {
             if (_viewMode == MainViewMode.InfrequentApps)
@@ -711,11 +726,11 @@ public sealed class MainForm : Form
         };
         flow.Controls.Add(_recommendedButton);
 
-        ConfigureActionButton(_cDriveAdviceButton, "C盘建议", 82);
+        ConfigureActionButton(_cDriveAdviceButton, "C盘建议", 72);
         _cDriveAdviceButton.Click += async (_, _) => await OpenCDriveAdviceAsync();
         flow.Controls.Add(_cDriveAdviceButton);
 
-        ConfigureActionButton(_cleanSelectedButton, "处理", 64);
+        ConfigureActionButton(_cleanSelectedButton, "处理", 50);
         _cleanSelectedButton.Click += async (_, _) =>
         {
             var items = _viewMode == MainViewMode.InfrequentApps
@@ -725,7 +740,7 @@ public sealed class MainForm : Form
         };
         flow.Controls.Add(_cleanSelectedButton);
 
-        ConfigureActionButton(_safeCleanButton, "安全清理", 90, primary: true);
+        ConfigureActionButton(_safeCleanButton, "安全清理", 78, primary: true);
         _safeCleanButton.Click += async (_, _) =>
         {
             var items = _visibleRows
@@ -736,11 +751,11 @@ public sealed class MainForm : Form
         };
         flow.Controls.Add(_safeCleanButton);
 
-        ConfigureActionButton(_migrateSelectedButton, "迁移", 64);
+        ConfigureActionButton(_migrateSelectedButton, "迁移", 50);
         _migrateSelectedButton.Click += async (_, _) => await StartMigrationFlowAsync(GetSelectedMigrationCandidatesFromOverview());
         flow.Controls.Add(_migrateSelectedButton);
 
-        ConfigureActionButton(_deleteOverviewSelectedButton, "删除", 64);
+        ConfigureActionButton(_deleteOverviewSelectedButton, "删除", 50);
         _deleteOverviewSelectedButton.Click += async (_, _) =>
         {
             var cleanupItems = CreateCleanupItemsFromMigrationCandidates(GetSelectedDeletionCandidatesFromOverview());
@@ -748,15 +763,15 @@ public sealed class MainForm : Form
         };
         flow.Controls.Add(_deleteOverviewSelectedButton);
 
-        ConfigureActionButton(_scheduleSettingsButton, "自动", 64);
+        ConfigureActionButton(_scheduleSettingsButton, "自动", 50);
         _scheduleSettingsButton.Click += (_, _) => OpenScheduleSettings();
         flow.Controls.Add(_scheduleSettingsButton);
 
-        ConfigureActionButton(_whitelistButton, "白名单", 78);
+        ConfigureActionButton(_whitelistButton, "白名单", 68);
         _whitelistButton.Click += (_, _) => AddCurrentSelectionToWhitelist();
         flow.Controls.Add(_whitelistButton);
 
-        ConfigureActionButton(_moreActionsButton, "更多", 92);
+        ConfigureActionButton(_moreActionsButton, "更多", 54);
         _moreActionsButton.Click += (_, _) => _moreActionsMenu.Show(_moreActionsButton, new Point(0, _moreActionsButton.Height));
         flow.Controls.Add(_moreActionsButton);
 
@@ -1659,6 +1674,7 @@ public sealed class MainForm : Form
         ConfigureFilterControlsForMode();
         RefreshPillButtonSizing();
         ApplyCurrentView();
+        UpdateScanStabilityMode();
     }
 
     private void CleanupSelectionRowChanged(object? sender, PropertyChangedEventArgs e)
@@ -1807,9 +1823,9 @@ public sealed class MainForm : Form
                 .ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
         };
 
-        _visibleRows = new BindingList<CleanupSelectionRow>(query.ToList());
-        _grid.DataSource = _visibleRows;
-        QueueCleanupIconLoad(_visibleRows);
+        var nextRows = query.ToList();
+        ReplaceGridItems(_grid, _visibleRows, nextRows);
+        QueueCleanupIconLoad(nextRows);
         SetActiveContent(_grid);
         UpdateDriveTabs();
         UpdateSelectionSummary();
@@ -1845,9 +1861,9 @@ public sealed class MainForm : Form
                 .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
         };
 
-        _visibleOverviewRows = new BindingList<CDriveOverviewEntry>(query.ToList());
-        _overviewGrid.DataSource = _visibleOverviewRows;
-        QueueOverviewIconLoad(_visibleOverviewRows);
+        var nextRows = query.ToList();
+        ReplaceGridItems(_overviewGrid, _visibleOverviewRows, nextRows);
+        QueueOverviewIconLoad(nextRows);
         SetActiveContent(_overviewGrid);
         UpdateDriveTabs();
         UpdateSelectionSummary();
@@ -1911,9 +1927,9 @@ public sealed class MainForm : Form
                 .ThenBy(entry => entry.DisplayName, StringComparer.OrdinalIgnoreCase)
         };
 
-        _visibleInfrequentRows = new BindingList<InfrequentSoftwareEntry>(query.ToList());
-        _infrequentGrid.DataSource = _visibleInfrequentRows;
-        QueueInfrequentIconLoad(_visibleInfrequentRows);
+        var nextRows = query.ToList();
+        ReplaceGridItems(_infrequentGrid, _visibleInfrequentRows, nextRows);
+        QueueInfrequentIconLoad(nextRows);
         SetActiveContent(_infrequentGrid);
         UpdateDriveTabs();
         UpdateSelectionSummary();
@@ -1921,6 +1937,123 @@ public sealed class MainForm : Form
         UpdateViewSummary();
         UpdateActionStates();
         UpdateGridPresentation();
+    }
+
+    private void ReplaceGridItems<T>(DataGridView grid, BindingList<T> bindingList, IReadOnlyList<T> nextItems)
+    {
+        var firstDisplayedIndex = TryGetFirstDisplayedRowIndex(grid);
+        var currentColumnIndex = grid.CurrentCell?.ColumnIndex ?? -1;
+        var suspendRedraw = grid.IsHandleCreated && !_resizeDragInProgress;
+        var parent = grid.Parent;
+        var suspendParentRedraw = parent is not null && parent.IsHandleCreated && !parent.IsDisposed && !_resizeDragInProgress;
+
+        grid.SuspendLayout();
+        if (suspendRedraw)
+        {
+            SetControlRedraw(grid, enabled: false);
+        }
+
+        if (suspendParentRedraw && parent is not null)
+        {
+            SetControlRedraw(parent, enabled: false);
+        }
+
+        try
+        {
+            if (!ReferenceEquals(grid.DataSource, bindingList))
+            {
+                grid.DataSource = bindingList;
+            }
+
+            bindingList.RaiseListChangedEvents = false;
+            try
+            {
+                bindingList.Clear();
+                foreach (var item in nextItems)
+                {
+                    bindingList.Add(item);
+                }
+            }
+            finally
+            {
+                bindingList.RaiseListChangedEvents = true;
+            }
+
+            bindingList.ResetBindings();
+            RestoreFirstDisplayedRowIndex(grid, firstDisplayedIndex);
+            RestoreCurrentCell(grid, currentColumnIndex);
+        }
+        finally
+        {
+            grid.ResumeLayout(false);
+            if (suspendRedraw)
+            {
+                SetControlRedraw(grid, enabled: true);
+                RedrawNow(grid.Handle);
+            }
+
+            if (suspendParentRedraw && parent is not null)
+            {
+                SetControlRedraw(parent, enabled: true);
+                RedrawNow(parent.Handle);
+            }
+        }
+    }
+
+    private static int TryGetFirstDisplayedRowIndex(DataGridView grid)
+    {
+        try
+        {
+            return grid.Rows.Count > 0 ? grid.FirstDisplayedScrollingRowIndex : -1;
+        }
+        catch
+        {
+            return -1;
+        }
+    }
+
+    private static void RestoreFirstDisplayedRowIndex(DataGridView grid, int rowIndex)
+    {
+        if (rowIndex < 0 || grid.Rows.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            grid.FirstDisplayedScrollingRowIndex = Math.Clamp(rowIndex, 0, grid.Rows.Count - 1);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void RestoreCurrentCell(DataGridView grid, int preferredColumnIndex)
+    {
+        if (grid.Rows.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var columnIndex = preferredColumnIndex >= 0 && preferredColumnIndex < grid.Columns.Count && grid.Columns[preferredColumnIndex].Visible
+                ? preferredColumnIndex
+                : grid.Columns
+                    .Cast<DataGridViewColumn>()
+                    .Where(column => column.Visible)
+                    .OrderBy(column => column.DisplayIndex)
+                    .Select(column => column.Index)
+                    .FirstOrDefault();
+
+            if (columnIndex >= 0 && columnIndex < grid.Columns.Count)
+            {
+                grid.CurrentCell = grid.Rows[0].Cells[columnIndex];
+            }
+        }
+        catch
+        {
+        }
     }
 
     private void QueueInfrequentIconLoad(IReadOnlyCollection<InfrequentSoftwareEntry> entries)
@@ -2535,7 +2668,7 @@ public sealed class MainForm : Form
         var selectedInfrequentCount = _infrequentRows.Count(entry => entry.Selected && entry.CanDeepDelete && !entry.IsProtected && !entry.IsWhitelisted);
         var inCandidateView = _viewMode == MainViewMode.CleanupCandidates;
         var inInfrequentView = _viewMode == MainViewMode.InfrequentApps;
-        var hasActiveScan = _operationManager.HasActiveJob(OperationJobKind.Scan);
+        var hasActiveScan = HasActiveScanJob();
         var dataFirst = IsUltraCompactLayout;
         _cleanSelectedButton.Enabled = !_isBusy && !_readOnlyMode && ((inCandidateView && selectedCount > 0) || (inInfrequentView && selectedInfrequentCount > 0));
         _recommendedButton.Enabled = !_isBusy && !_readOnlyMode && ((inCandidateView && _allRows.Count > 0) || (inInfrequentView && _infrequentRows.Count > 0));
@@ -4041,10 +4174,13 @@ public sealed class MainForm : Form
 
     private void ApplyStartupQuickSnapshot(ScanSnapshot snapshot)
     {
+        _deferredVisibleScanSnapshot = null;
         ReplaceSnapshot(snapshot);
         UpdateDriveSummary();
         UpdateDriveTabs();
         UpdateScheduleStatus();
+        UpdateScanStabilityMode(forceRepaint: true);
+        QueueVisualStabilizationAfterDataChange(forceLayout: true);
 
         if (!_preserveStartupView && _viewMode != MainViewMode.CleanupCandidates && snapshot.CleanupItems.Count > 0)
         {
@@ -4061,6 +4197,29 @@ public sealed class MainForm : Form
         SetStatusMessage(string.IsNullOrWhiteSpace(snapshot.PhaseLabel)
             ? "已先显示 C盘候选，正在补全当前视图和其它盘"
             : snapshot.PhaseLabel);
+    }
+
+    private void ApplyIntermediateScanSnapshot(ScanSnapshot snapshot, string fallbackMessage)
+    {
+        if (ShouldDeferScanSnapshotPresentation())
+        {
+            _deferredVisibleScanSnapshot = snapshot;
+            UpdateScanWarningBanner(snapshot.Warnings);
+            SetStatusMessage(string.IsNullOrWhiteSpace(snapshot.PhaseLabel) ? fallbackMessage : snapshot.PhaseLabel);
+            UpdateScanStabilityMode(forceRepaint: true);
+            QueueVisualStabilizationAfterDataChange(forceLayout: true);
+            return;
+        }
+
+        _deferredVisibleScanSnapshot = null;
+        ReplaceSnapshot(snapshot);
+        RestoreDeferredStartupViewIfReady(snapshot);
+        UpdateDriveSummary();
+        UpdateDriveTabs();
+        UpdateScheduleStatus();
+        SetStatusMessage(string.IsNullOrWhiteSpace(snapshot.PhaseLabel) ? fallbackMessage : snapshot.PhaseLabel);
+        UpdateScanStabilityMode(forceRepaint: true);
+        QueueVisualStabilizationAfterDataChange(forceLayout: true);
     }
 
     private void RestoreDeferredStartupViewIfReady(ScanSnapshot snapshot)
@@ -4089,6 +4248,27 @@ public sealed class MainForm : Form
         ConfigureFilterControlsForMode();
         UpdateViewModeButtons();
         ApplyCurrentView();
+        UpdateScanStabilityMode(forceRepaint: true);
+        QueueVisualStabilizationAfterDataChange(forceLayout: true);
+    }
+
+    private bool ShouldDeferScanSnapshotPresentation()
+    {
+        return IsUltraCompactLayout
+            && _viewMode == MainViewMode.CleanupCandidates
+            && _allRows.Count > 0
+            && HasActiveScanJob();
+    }
+
+    private bool HasActiveScanJob()
+    {
+        if (_operationManager.HasActiveJob(OperationJobKind.Scan))
+        {
+            return true;
+        }
+
+        return _queueState.Jobs.Any(job => job.Kind == OperationJobKind.Scan
+            && job.State is OperationJobState.Running or OperationJobState.Queued);
     }
 
     private void QueueScanRefresh(bool userInitiated)
@@ -4132,17 +4312,9 @@ public sealed class MainForm : Form
                 });
 
                 var cQuickSnapshot = _scanService.ScanStartupCQuickSnapshot(_settings, progress, 12, 22, "固定盘扫描");
-                OnUiThread(() =>
-                {
-                    ReplaceSnapshot(cQuickSnapshot);
-                    RestoreDeferredStartupViewIfReady(cQuickSnapshot);
-                    UpdateDriveSummary();
-                    UpdateDriveTabs();
-                    UpdateScheduleStatus();
-                    SetStatusMessage(string.IsNullOrWhiteSpace(cQuickSnapshot.PhaseLabel)
-                        ? "已先显示 C盘候选和第一批 C盘建议，正在补全完整 C盘分析"
-                        : cQuickSnapshot.PhaseLabel);
-                });
+                OnUiThread(() => ApplyIntermediateScanSnapshot(
+                    cQuickSnapshot,
+                    "已先显示 C盘候选和第一批 C盘建议，正在补全完整 C盘分析"));
 
                 progress.Report(new OperationProgress
                 {
@@ -4154,17 +4326,9 @@ public sealed class MainForm : Form
                 });
 
                 var cDriveSnapshot = _scanService.ScanSnapshot(_settings, ScanDriveScope.SystemDriveOnly, progress, 26, 58, "固定盘扫描");
-                OnUiThread(() =>
-                {
-                    ReplaceSnapshot(cDriveSnapshot);
-                    RestoreDeferredStartupViewIfReady(cDriveSnapshot);
-                    UpdateDriveSummary();
-                    UpdateDriveTabs();
-                    UpdateScheduleStatus();
-                    SetStatusMessage(string.IsNullOrWhiteSpace(cDriveSnapshot.PhaseLabel)
-                        ? "已先显示 C盘，正在补全其它盘"
-                        : cDriveSnapshot.PhaseLabel);
-                });
+                OnUiThread(() => ApplyIntermediateScanSnapshot(
+                    cDriveSnapshot,
+                    "已先显示 C盘，正在补全其它盘"));
 
                 progress.Report(new OperationProgress
                 {
@@ -4183,6 +4347,7 @@ public sealed class MainForm : Form
             {
                 OnUiThread(() =>
                 {
+                    _deferredVisibleScanSnapshot = null;
                     ReplaceSnapshot(snapshot);
                     RestoreDeferredStartupViewIfReady(snapshot);
                     _snapshotCacheService.Save(_settings, snapshot);
@@ -4190,6 +4355,8 @@ public sealed class MainForm : Form
                     UpdateDriveSummary();
                     UpdateDriveTabs();
                     UpdateScheduleStatus();
+                    UpdateScanStabilityMode(forceRepaint: true);
+                    QueueVisualStabilizationAfterDataChange(forceLayout: true);
                     var visibleWarningCount = GetVisibleScanWarnings(snapshot.Warnings).Count;
                     var informationalWarningCount = snapshot.Warnings.Count - visibleWarningCount;
                     var message = visibleWarningCount > 0
@@ -4198,12 +4365,16 @@ public sealed class MainForm : Form
                             ? $"扫描完成：发现 {snapshot.CleanupItems.Count} 个候选项目，并静默跳过了 {informationalWarningCount} 处常见受限目录。"
                         : $"扫描完成：发现 {snapshot.CleanupItems.Count} 个候选项目，并更新了 C 盘总览";
                     SetStatusMessage(message);
+                    WriteQaStateFile("scan-completed");
                 });
             },
             failed: ex =>
             {
                 OnUiThread(() =>
                 {
+                    _deferredVisibleScanSnapshot = null;
+                    UpdateScanStabilityMode(forceRepaint: true);
+                    QueueVisualStabilizationAfterDataChange(forceLayout: true);
                     var fatalLogPath = WriteFatalScanFailureLog(ex);
                     SetStatusMessage($"扫描未完全可用：{ex.Message}");
                     UpdateScanWarningBanner(new[]
@@ -4435,6 +4606,7 @@ public sealed class MainForm : Form
     private void UpdateJobCenter(OperationQueueState state)
     {
         _queueState = state;
+        UpdateScanStabilityMode();
         var activeCount = state.RunningCount + state.QueuedCount;
         var collapseCompleted = activeCount == 0 && state.CompletedCount > 0;
         var compactSummaryOnly = IsCompactLayout;
@@ -4455,6 +4627,7 @@ public sealed class MainForm : Form
         if (!_jobCenterPanel.Visible)
         {
             _jobCenterSummaryLabel.Visible = false;
+            _jobCenterCompactProgressBar.Visible = false;
             _jobListFlow.Visible = false;
             return;
         }
@@ -4469,10 +4642,16 @@ public sealed class MainForm : Form
                 : BuildCompactJobSummary(activeJob);
             _jobCenterSummaryLabel.Margin = IsUltraCompactLayout ? Padding.Empty : new Padding(0, 0, 0, 8);
             _jobCenterSummaryLabel.Visible = true;
+            _jobCenterCompactProgressBar.Value = activeJob is null ? 0 : GetJobProgressBarValue(activeJob);
+            _jobCenterCompactProgressBar.IsIndeterminate = activeJob is not null && activeJob.IsIndeterminate && activeJob.Percent <= 0 && activeJob.State == OperationJobState.Running;
+            _jobCenterCompactProgressBar.Height = IsUltraCompactLayout ? 7 : 8;
+            _jobCenterCompactProgressBar.Margin = IsUltraCompactLayout ? new Padding(0, 3, 0, 0) : new Padding(0, 4, 0, 0);
+            _jobCenterCompactProgressBar.Visible = activeJob is not null && activeJob.State is OperationJobState.Running or OperationJobState.Queued;
             _jobListFlow.Visible = false;
             _toolTip.SetToolTip(_jobCenterSummaryLabel, activeJob is null
                 ? $"后台任务：运行中 {state.RunningCount} 个，排队中 {state.QueuedCount} 个"
                 : BuildCollapsedJobToolTip(activeJob));
+            _toolTip.SetToolTip(_jobCenterCompactProgressBar, activeJob is null ? string.Empty : BuildJobProgressText(activeJob));
             return;
         }
 
@@ -4484,6 +4663,7 @@ public sealed class MainForm : Form
                 ? "最近后台任务已完成。"
                 : BuildCollapsedJobSummary(latestJob);
             _jobCenterSummaryLabel.Visible = true;
+            _jobCenterCompactProgressBar.Visible = false;
             _jobListFlow.Visible = false;
             _toolTip.SetToolTip(_jobCenterSummaryLabel, latestJob is null
                 ? "最近后台任务已完成。"
@@ -4491,6 +4671,7 @@ public sealed class MainForm : Form
             return;
         }
 
+        _jobCenterCompactProgressBar.Visible = false;
         _jobCenterSummaryLabel.Visible = false;
         _jobListFlow.Visible = true;
 
@@ -4743,12 +4924,15 @@ public sealed class MainForm : Form
     private string BuildCompactJobSummary(OperationJob job)
     {
         var progressText = BuildJobProgressText(job);
+        var title = IsUltraCompactLayout && job.Kind == OperationJobKind.Scan
+            ? "后台刷新"
+            : job.Title;
         if (string.IsNullOrWhiteSpace(progressText))
         {
-            return $"{job.Title} · {GetJobStateText(job)}";
+            return $"{title} · {GetJobStateText(job)}";
         }
 
-        return $"{job.Title} · {GetJobStateText(job)} · {progressText}";
+        return $"{title} · {GetJobStateText(job)} · {progressText}";
     }
 
     private static string BuildCollapsedJobToolTip(OperationJob job)
@@ -4862,6 +5046,7 @@ public sealed class MainForm : Form
 
     private void ApplyCompactHeaderTexts()
     {
+        ApplyHeaderModeText();
         var fullDriveSummary = _driveSummaryLabel.Tag as string ?? _driveSummaryLabel.Text;
         _driveSummaryLabel.Tag = fullDriveSummary;
         _toolTip.SetToolTip(_driveSummaryLabel, fullDriveSummary);
@@ -4896,9 +5081,20 @@ public sealed class MainForm : Form
 
     private void ApplyDataFirstVisibility()
     {
+        _headerPanel.Visible = !IsUltraCompactLayout;
         _driveTabsPanel.Visible = false;
         _teachingPanel.Visible = false;
         _teachingSecondaryLabel.Visible = false;
+        _toolbarPanel.Visible = !_scanStabilityMode;
+        _summaryPanel.Visible = !_scanStabilityMode;
+
+        if (_scanStabilityMode)
+        {
+            _filtersPanel.Visible = false;
+            _selectionHintLabel.Visible = false;
+            _quickFiltersHost.Visible = false;
+            return;
+        }
 
         if (IsUltraCompactLayout)
         {
@@ -4912,6 +5108,51 @@ public sealed class MainForm : Form
         _filtersPanel.Visible = true;
         _selectionHintLabel.Visible = !IsCompactLayout;
         _quickFiltersHost.Visible = _viewMode == MainViewMode.CleanupCandidates;
+    }
+
+    private void UpdateScanStabilityMode(bool forceRepaint = false)
+    {
+        var nextMode = IsUltraCompactLayout && HasActiveScanJob();
+        if (!forceRepaint && _scanStabilityMode == nextMode)
+        {
+            return;
+        }
+
+        _scanStabilityMode = nextMode;
+        ApplyDataFirstVisibility();
+
+        if (!forceRepaint || IsDisposed || !IsHandleCreated || _resizeDragInProgress)
+        {
+            return;
+        }
+
+        QueueVisualStabilizationAfterDataChange(forceLayout: true);
+    }
+
+    private void QueueVisualStabilizationAfterDataChange(bool forceLayout = false)
+    {
+        if (IsDisposed || !IsHandleCreated)
+        {
+            return;
+        }
+
+        BeginInvoke(new Action(() =>
+        {
+            if (IsDisposed || !IsHandleCreated || _resizeDragInProgress)
+            {
+                return;
+            }
+
+            if (forceLayout)
+            {
+                _rootLayout.PerformLayout();
+                _contentPanel.PerformLayout();
+                GetActiveContentControl().PerformLayout();
+            }
+
+            FlushPendingVisualRefreshes();
+            ForceCleanRepaintAfterResize();
+        }));
     }
 
     private static void ApplyButtonFont(Button button, bool compactLayout, bool ultraCompactLayout, FontStyle? styleOverride = null, bool compactQuickFilter = false)
@@ -5515,6 +5756,21 @@ public sealed class MainForm : Form
                 MainViewMode.InfrequentApps => _visibleInfrequentRows.Count,
                 _ => _visibleRows.Count
             };
+            var viewButtonMetrics = BuildButtonQaMetrics(_cleanupViewButton, _overviewViewButton, _infrequentViewButton);
+            var actionButtonMetrics = BuildButtonQaMetrics(
+                _scanButton,
+                _recommendedButton,
+                _cDriveAdviceButton,
+                _cleanSelectedButton,
+                _safeCleanButton,
+                _migrateSelectedButton,
+                _deleteOverviewSelectedButton,
+                _scheduleSettingsButton,
+                _whitelistButton,
+                _moreActionsButton);
+            var contentHeightRatio = ClientSize.Height <= 0
+                ? 0d
+                : Math.Round(_contentPanel.Height / (double)ClientSize.Height, 3);
 
             var state = new
             {
@@ -5541,6 +5797,14 @@ public sealed class MainForm : Form
                 TeachingVisible = _teachingPanel.Visible,
                 SummaryVisible = _summaryPanel.Visible,
                 ContentHeight = _contentPanel.Height,
+                ContentHeightRatio = contentHeightRatio,
+                TopChromeHeight = Math.Max(0, ClientSize.Height - _contentPanel.Height),
+                ViewButtonMetrics = viewButtonMetrics,
+                ActionButtonMetrics = actionButtonMetrics,
+                MaxViewButtonExcess = viewButtonMetrics.Count == 0 ? 0 : viewButtonMetrics.Max(metric => metric.Excess),
+                MaxViewButtonRatio = viewButtonMetrics.Count == 0 ? 0d : Math.Round(viewButtonMetrics.Max(metric => metric.Ratio), 2),
+                MaxActionButtonExcess = actionButtonMetrics.Count == 0 ? 0 : actionButtonMetrics.Max(metric => metric.Excess),
+                MaxActionButtonRatio = actionButtonMetrics.Count == 0 ? 0d : Math.Round(actionButtonMetrics.Max(metric => metric.Ratio), 2),
                 SnapshotCleanupRows = _snapshot?.CleanupItems.Count ?? 0,
                 SnapshotOverviewRows = _snapshot?.CDriveOverviewEntries.Count ?? 0,
                 SnapshotInfrequentRows = _snapshot?.InfrequentSoftwareEntries.Count ?? 0,
@@ -5555,6 +5819,31 @@ public sealed class MainForm : Form
         catch
         {
         }
+    }
+
+    private static IReadOnlyList<ButtonQaMetric> BuildButtonQaMetrics(params Button[] buttons)
+    {
+        return buttons
+            .Where(button => button.Visible)
+            .Select(BuildButtonQaMetric)
+            .ToList();
+    }
+
+    private static ButtonQaMetric BuildButtonQaMetric(Button button)
+    {
+        var text = button.Text ?? string.Empty;
+        var measured = TextRenderer.MeasureText(
+            string.IsNullOrWhiteSpace(text) ? "示例" : text,
+            button.Font,
+            new Size(int.MaxValue, int.MaxValue),
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+        var textWidth = Math.Max(1, measured.Width);
+        return new ButtonQaMetric(
+            text,
+            button.Width,
+            textWidth,
+            Math.Max(0, button.Width - textWidth),
+            Math.Round(button.Width / (double)textWidth, 2));
     }
 
     private void OnUiThread(Action action)
@@ -6259,7 +6548,7 @@ public sealed class MainForm : Form
         button.Click += (_, _) => SwitchView(viewMode);
         button.Margin = new Padding(0, 0, 8, 0);
         button.FlatStyle = FlatStyle.Flat;
-        UiScaleHelper.ApplyButtonSizing(button, text, 68, 14, minHeight: 34, verticalPadding: 12);
+        UiScaleHelper.ApplyButtonSizing(button, text, 52, 12, minHeight: 34, verticalPadding: 12);
     }
 
     private void UpdateViewModeButtons()
@@ -6267,6 +6556,17 @@ public sealed class MainForm : Form
         ApplyPillStyle(_cleanupViewButton, _viewMode == MainViewMode.CleanupCandidates);
         ApplyPillStyle(_overviewViewButton, _viewMode == MainViewMode.CDriveOverview);
         ApplyPillStyle(_infrequentViewButton, _viewMode == MainViewMode.InfrequentApps);
+        ApplyHeaderModeText();
+    }
+
+    private void ApplyHeaderModeText()
+    {
+        _headerModeLabel.Text = _viewMode switch
+        {
+            MainViewMode.CDriveOverview => IsUltraCompactLayout ? "总览" : IsCompactLayout ? "C盘总览" : "C 盘总览 · 迁移与大目录",
+            MainViewMode.InfrequentApps => IsUltraCompactLayout ? "未用" : IsCompactLayout ? "长期未用" : "长期未用软件 · 深度处理",
+            _ => IsUltraCompactLayout ? "C盘优先" : IsCompactLayout ? "C盘优先 · 候选" : "C 盘优先 · 全部固定盘候选"
+        };
     }
 
     private void RefreshToolbarButtonSizing()
@@ -6284,16 +6584,16 @@ public sealed class MainForm : Form
         ApplyButtonFont(_whitelistButton, dense, ultra);
         ApplyButtonFont(_moreActionsButton, dense, ultra);
 
-        ApplyActionButtonSizing(_scanButton, "扫描", 64, dense, ultra);
-        ApplyActionButtonSizing(_recommendedButton, "建议", 64, dense, ultra);
-        ApplyActionButtonSizing(_cDriveAdviceButton, "C盘建议", 82, dense, ultra);
-        ApplyActionButtonSizing(_cleanSelectedButton, "处理", 64, dense, ultra);
-        ApplyActionButtonSizing(_safeCleanButton, "安全清理", 90, dense, ultra);
-        ApplyActionButtonSizing(_migrateSelectedButton, "迁移", 64, dense, ultra);
-        ApplyActionButtonSizing(_deleteOverviewSelectedButton, "删除", 64, dense, ultra);
-        ApplyActionButtonSizing(_scheduleSettingsButton, "自动", 64, dense, ultra);
-        ApplyActionButtonSizing(_whitelistButton, "白名单", 78, dense, ultra);
-        ApplyActionButtonSizing(_moreActionsButton, "更多", 92, dense, ultra);
+        ApplyActionButtonSizing(_scanButton, _scanButton.Text, 50, dense, ultra);
+        ApplyActionButtonSizing(_recommendedButton, _recommendedButton.Text, 50, dense, ultra);
+        ApplyActionButtonSizing(_cDriveAdviceButton, _cDriveAdviceButton.Text, ultra ? 50 : 68, dense, ultra);
+        ApplyActionButtonSizing(_cleanSelectedButton, _cleanSelectedButton.Text, 50, dense, ultra);
+        ApplyActionButtonSizing(_safeCleanButton, _safeCleanButton.Text, ultra ? 58 : 78, dense, ultra);
+        ApplyActionButtonSizing(_migrateSelectedButton, _migrateSelectedButton.Text, 50, dense, ultra);
+        ApplyActionButtonSizing(_deleteOverviewSelectedButton, _deleteOverviewSelectedButton.Text, 50, dense, ultra);
+        ApplyActionButtonSizing(_scheduleSettingsButton, _scheduleSettingsButton.Text, 50, dense, ultra);
+        ApplyActionButtonSizing(_whitelistButton, _whitelistButton.Text, 62, dense, ultra);
+        ApplyActionButtonSizing(_moreActionsButton, _moreActionsButton.Text, 54, dense, ultra);
     }
 
     private void RefreshScaledUi(bool forceLayout = false, bool refreshGridContent = true)
@@ -6303,6 +6603,7 @@ public sealed class MainForm : Form
         try
         {
             ApplyLayoutDensity(forceLayout);
+            RefreshAdaptiveCommandTexts();
             RefreshToolbarButtonSizing();
             RefreshPillButtonSizing();
             RefreshFilterControlSizing();
@@ -6311,12 +6612,40 @@ public sealed class MainForm : Form
             UpdateGridPresentation(refreshGridContent);
             RefreshJobCardWidths();
             ApplyCompactHeaderTexts();
+            UpdateScanStabilityMode();
         }
         finally
         {
             _rootLayout.ResumeLayout(true);
             ResumeLayout(true);
         }
+    }
+
+    private void RefreshAdaptiveCommandTexts()
+    {
+        ApplyResponsiveButtonText(_cleanupViewButton, "候选", "清理候选");
+        ApplyResponsiveButtonText(_overviewViewButton, "总览", "C盘总览");
+        ApplyResponsiveButtonText(_infrequentViewButton, IsUltraCompactLayout || IsCompactLayout ? "未用" : "未用软件", "长期未用软件");
+        ApplyResponsiveButtonText(_scanButton, "扫描", "重新扫描");
+        ApplyResponsiveButtonText(_recommendedButton, "建议", "勾选推荐项");
+        ApplyResponsiveButtonText(_cDriveAdviceButton, IsUltraCompactLayout ? "C盘" : "C盘建议", "查看 C 盘建议");
+        ApplyResponsiveButtonText(_cleanSelectedButton, "处理", "处理当前勾选");
+        ApplyResponsiveButtonText(_safeCleanButton, IsUltraCompactLayout ? "安全" : "安全清理", "只处理低风险项目");
+        ApplyResponsiveButtonText(_migrateSelectedButton, "迁移", "迁移当前勾选");
+        ApplyResponsiveButtonText(_deleteOverviewSelectedButton, "删除", "删除当前勾选");
+        ApplyResponsiveButtonText(_scheduleSettingsButton, "自动", "自动清理与后台任务设置");
+        ApplyResponsiveButtonText(_whitelistButton, "白名单", "加入白名单");
+        ApplyResponsiveButtonText(_moreActionsButton, "更多", "更多操作");
+    }
+
+    private void ApplyResponsiveButtonText(Button button, string text, string toolTip)
+    {
+        if (!string.Equals(button.Text, text, StringComparison.Ordinal))
+        {
+            button.Text = text;
+        }
+
+        _toolTip.SetToolTip(button, toolTip);
     }
 
     private void RefreshPillButtonSizing()
@@ -6327,7 +6656,7 @@ public sealed class MainForm : Form
         ApplyButtonFont(_overviewViewButton, dense, ultra);
         ApplyButtonFont(_infrequentViewButton, dense, ultra);
         ApplyControlFont(_driveSelectorComboBox, ultra ? 8.35f : dense ? 8.7f : 9f);
-        _driveSelectorComboBox.Width = ultra ? 82 : dense ? 92 : 104;
+        _driveSelectorComboBox.Width = ultra ? 74 : dense ? 84 : 96;
         RefreshPillButtonSizing(_cleanupViewButton, compact: false, dense, ultra);
         RefreshPillButtonSizing(_overviewViewButton, compact: false, dense, ultra);
         RefreshPillButtonSizing(_infrequentViewButton, compact: false, dense, ultra);
@@ -6532,11 +6861,11 @@ public sealed class MainForm : Form
     private static void RefreshPillButtonSizing(Button button, bool compact, bool dense = false, bool ultraDense = false)
     {
         var minimumWidth = compact
-            ? (ultraDense ? 68 : dense ? 76 : 84)
-            : (ultraDense ? 52 : dense ? 60 : 68);
+            ? (ultraDense ? 58 : dense ? 66 : 74)
+            : (ultraDense ? 60 : dense ? 64 : 70);
         var horizontalPadding = compact
-            ? (ultraDense ? 14 : dense ? 20 : 28)
-            : (ultraDense ? 8 : dense ? 12 : 16);
+            ? (ultraDense ? 12 : dense ? 16 : 22)
+            : (ultraDense ? 10 : dense ? 12 : 14);
         var minimumHeight = compact
             ? (ultraDense ? 26 : dense ? 30 : 34)
             : (ultraDense ? 28 : dense ? 32 : 36);
@@ -6664,6 +6993,13 @@ public sealed class MainForm : Form
         AutoSizeMode AutoSizeMode,
         Size MinimumSize,
         Size MaximumSize);
+
+    private sealed record ButtonQaMetric(
+        string Text,
+        int Width,
+        int TextWidth,
+        int Excess,
+        double Ratio);
 
     private static class NativeMethods
     {

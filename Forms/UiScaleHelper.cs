@@ -32,11 +32,11 @@ internal static class UiScaleHelper
         return MeasurementCache.GetOrAdd(cacheKey, _ =>
         {
             var measured = TextRenderer.MeasureText(
-                text + "  ",
+                string.IsNullOrWhiteSpace(text) ? "示例" : text,
                 measureFont,
                 new Size(int.MaxValue, int.MaxValue),
                 TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
-            return Math.Max(minWidth, measured.Width + horizontalPadding + 14);
+            return Math.Max(minWidth, measured.Width + horizontalPadding + 8);
         });
     }
 
@@ -116,8 +116,7 @@ internal static class UiScaleHelper
         button.AutoSize = false;
         button.AutoEllipsis = false;
         var measuredWidth = MeasureButtonWidth(text, minWidth, horizontalPadding, button.Font);
-        var preferredWidth = button.GetPreferredSize(Size.Empty).Width + 10;
-        var width = Math.Max(minWidth, Math.Max(measuredWidth, preferredWidth));
+        var width = Math.Max(minWidth, measuredWidth);
         var height = MeasureButtonHeight(minHeight, verticalPadding, button.Font);
         button.Width = width;
         button.Height = height;

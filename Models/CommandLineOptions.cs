@@ -12,6 +12,7 @@ public sealed class CommandLineOptions
     public string? SelectionFile { get; init; }
     public MainViewMode? QaViewMode { get; init; }
     public string? QaStateFile { get; init; }
+    public bool QaAllowStartupRefresh { get; init; }
 
     public static CommandLineOptions Parse(string[] args)
     {
@@ -25,6 +26,7 @@ public sealed class CommandLineOptions
         string? selectionFile = null;
         string? qaStateFile = null;
         MainViewMode? qaViewMode = null;
+        var qaAllowStartupRefresh = false;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -70,6 +72,10 @@ public sealed class CommandLineOptions
                         qaStateFile = args[++i];
                     }
                     break;
+                case "--qa-refresh":
+                case "--qa-allow-startup-refresh":
+                    qaAllowStartupRefresh = true;
+                    break;
             }
         }
 
@@ -84,7 +90,8 @@ public sealed class CommandLineOptions
             NoPrompt = noPrompt,
             SelectionFile = selectionFile,
             QaViewMode = qaViewMode,
-            QaStateFile = qaStateFile
+            QaStateFile = qaStateFile,
+            QaAllowStartupRefresh = qaAllowStartupRefresh
         };
     }
 }

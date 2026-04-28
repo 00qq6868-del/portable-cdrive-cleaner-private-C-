@@ -164,7 +164,7 @@ internal static class Program
             startupViewOverride: options.QaViewMode,
             preserveStartupView: options.QaViewMode.HasValue,
             persistWindowState: !options.QaViewMode.HasValue,
-            disableStartupRefresh: options.QaViewMode.HasValue,
+            disableStartupRefresh: options.QaViewMode.HasValue && !options.QaAllowStartupRefresh,
             qaStateFilePath: options.QaStateFile));
     }
 
