@@ -85,6 +85,27 @@ public static class ApplicationIconCache
         return GetRecommendedIconSize(scaledSize);
     }
 
+    public static int GetRecommendedIconSizeForDpiWithinBudget(int deviceDpi, int logicalSize, int maxPixelSize)
+    {
+        var scaledSize = (int)Math.Round(logicalSize * Math.Max(deviceDpi, 96) / 96d);
+        var preferred = GetRecommendedIconSize(scaledSize);
+        var budget = Math.Max(16, maxPixelSize);
+        if (preferred <= budget)
+        {
+            return preferred;
+        }
+
+        for (var i = SizeBuckets.Length - 1; i >= 0; i--)
+        {
+            if (SizeBuckets[i] <= budget)
+            {
+                return SizeBuckets[i];
+            }
+        }
+
+        return SizeBuckets[0];
+    }
+
     private static IEnumerable<IconSourceCandidate> EnumerateCandidates(IconLookupRequest request)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -3,27 +3,31 @@
   "local_repo_path": "E:\\vscode Claude\\PortableCDriveCleaner",
   "install_path": "D:\\磁盘清理器\\磁盘清理器.exe",
   "current_phase": "历史问题收口 + 主窗口小窗布局继续收口",
-  "current_task": "商业级图标清晰度、缩放稳定、视觉质感闭环",
+  "current_task": "公开 GitHub 仓库 + 商业级视觉与图标继续深化",
   "task_status": "in_progress",
-  "last_completed_step": "已把 2026-04-28_223247 三轮安装版 QA 作为当前真实基线：自动硬门槛通过，InfrequentApps 稳定显示 49 行，175% DPI 下 ActiveVisibleRows=49，启动约 2.37-3.12 秒；但结论仍是 PASS_PENDING_VISUAL，不能宣称商业级视觉完成。下一步继续做高级暗黑视觉、图标清晰度和缩放/加载体验深化。",
-  "in_progress_step": "人工视觉仍未最终接受，继续降低粗糙边框和盒子感，提升商业级暗黑科技视觉",
-  "next_step": "人工视觉仍未最终接受，继续降低粗糙边框和盒子感，提升商业级暗黑科技视觉",
+  "last_completed_step": "用户新增要求：1) 将当前 GitHub 仓库改为公开；2) 图标仍不满意，清理候选先采用高清文件夹形式；3) 增加倒三角盘符下拉选择，默认 C 盘，下拉可选其它盘；4) 清理候选/C盘总览/长期未用软件等顶部按钮缩短，小窗口不要大量空白；5) 加载时仍抖动，页面仍难看。当前已先做低风险视觉改动：降低面板满屏边框、调暗表格线条、按钮更克制、图标尺寸受行高预算约束；dotnet build 已通过，但尚未发布和三轮 QA，不能声明完成。敏感信息快速扫描未发现明显 token/private key。",
+  "in_progress_step": "尝试把 GitHub 仓库从 private 改为 public，并记录真实结果",
+  "next_step": "尝试把 GitHub 仓库从 private 改为 public，并记录真实结果",
   "pending_items": [
-    "人工视觉仍未最终接受，继续降低粗糙边框和盒子感，提升商业级暗黑科技视觉",
-    "继续核查并提升真实应用图标在列表中的清晰度和语义准确性",
-    "所有视觉或图标改动后必须重新构建、发布安装版并跑 3 轮 QA",
-    "进度区只允许绿色条、百分比、倒计时变化，其它元素不得跳动"
+    "尝试把 GitHub 仓库从 private 改为 public，并记录真实结果",
+    "实现盘符倒三角下拉选择，默认 C 盘，可选其它盘",
+    "缩短顶部视图按钮和工具按钮，减少小窗口空白占位",
+    "清理候选图标先统一成高清文件夹/目录语义图标，同时继续保留真实应用图标场景",
+    "继续压掉加载抖动和整窗重排，改完后必须构建、发布、安装版三轮 QA"
   ],
   "modified_files": [
-    "artifacts/icon-qa/2026-04-28_223247",
+    "Forms/MainForm.cs",
+    "Forms/ThemedButton.cs",
+    "Infrastructure/ApplicationIconCache.cs",
+    "Infrastructure/UiThemePalette.cs",
     "AI_STATE.json",
     "CURRENT_TASK.md",
     "OPTIMIZATION_LOG.md",
     "INTERRUPTED_PROGRESS.md"
   ],
-  "last_checkpoint_time": "2026-04-28 22:41:55",
-  "last_commit": "8ce619c",
+  "last_checkpoint_time": "2026-04-28 23:08:37",
+  "last_commit": "a01e921",
   "push_status": "push_requested",
   "branch": "main",
-  "latest_checkpoint": "checkpoints/2026-04-28_224155_progress.md"
+  "latest_checkpoint": "checkpoints/2026-04-28_230837_progress.md"
 }

@@ -141,6 +141,15 @@ public sealed class ThemedButton : Button
         graphics.FillPath(fillBrush, path);
         graphics.DrawPath(borderPen, path);
 
+        if (VisualStyle is ThemedButtonVisualStyle.Primary or ThemedButtonVisualStyle.PillSelected)
+        {
+            var highlightBounds = bounds;
+            highlightBounds.Inflate(-2, -2);
+            highlightBounds.Height = Math.Max(1, Math.Min(3, highlightBounds.Height / 5));
+            using var highlightPen = new Pen(Color.FromArgb(90, UiThemePalette.AccentStrong));
+            graphics.DrawLine(highlightPen, highlightBounds.Left + CornerRadius / 2, highlightBounds.Top, highlightBounds.Right - CornerRadius / 2, highlightBounds.Top);
+        }
+
         if (Focused && ShowFocusCues && Enabled)
         {
             var focusBounds = bounds;
@@ -175,7 +184,7 @@ public sealed class ThemedButton : Button
         {
             return new ButtonVisualState(
                 UiThemePalette.SurfaceMuted,
-                VisualStyle is ThemedButtonVisualStyle.Primary ? UiThemePalette.BorderStrong : UiThemePalette.Border,
+                VisualStyle is ThemedButtonVisualStyle.Primary ? UiThemePalette.BorderStrong : UiThemePalette.BorderMuted,
                 UiThemePalette.DisabledText);
         }
 
@@ -184,18 +193,18 @@ public sealed class ThemedButton : Button
             ThemedButtonVisualStyle.Primary => CreateState(
                 UiThemePalette.Accent,
                 UiThemePalette.AccentStrong,
-                UiThemePalette.TextPrimary,
+                Color.FromArgb(3, 16, 10),
                 hoverBoost: 0.06f,
                 pressBoost: -0.08f),
             ThemedButtonVisualStyle.Pill => CreateState(
-                UiThemePalette.SurfaceMuted,
-                UiThemePalette.Border,
+                UiThemePalette.Surface,
+                UiThemePalette.BorderMuted,
                 UiThemePalette.TextSecondary,
                 hoverBoost: 0.05f,
                 pressBoost: 0.09f),
             ThemedButtonVisualStyle.PillSelected => CreateState(
-                UiThemePalette.AccentSurfaceRaised,
-                UiThemePalette.Accent,
+                UiThemePalette.AccentSurface,
+                UiThemePalette.AccentSoftBorder,
                 UiThemePalette.AccentStrong,
                 hoverBoost: 0.05f,
                 pressBoost: -0.02f),
@@ -206,9 +215,9 @@ public sealed class ThemedButton : Button
                 hoverBoost: 0.06f,
                 pressBoost: -0.04f),
             _ => CreateState(
-                UiThemePalette.Surface,
-                UiThemePalette.BorderStrong,
-                UiThemePalette.TextPrimary,
+                UiThemePalette.SurfaceMuted,
+                UiThemePalette.Border,
+                UiThemePalette.TextSecondary,
                 hoverBoost: 0.05f,
                 pressBoost: 0.09f)
         };

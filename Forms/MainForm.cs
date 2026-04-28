@@ -754,7 +754,7 @@ public sealed class MainForm : Form
 
     private void BuildDriveTabsRow()
     {
-        _driveTabsPanel.BackColor = Color.White;
+        _driveTabsPanel.BackColor = UiThemePalette.Surface;
         _driveTabsPanel.AutoSize = true;
         _driveTabsPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         _driveTabsPanel.Padding = new Padding(12, 10, 12, 8);
@@ -779,7 +779,7 @@ public sealed class MainForm : Form
         _teachingPanel.Dock = DockStyle.Top;
         _teachingPanel.AutoSize = true;
         _teachingPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        _teachingPanel.BackColor = Color.FromArgb(239, 248, 245);
+        _teachingPanel.BackColor = UiThemePalette.AccentSurface;
         _teachingPanel.Padding = new Padding(12, 8, 12, 8);
         _teachingPanel.Margin = new Padding(0, 0, 0, 8);
         layout.Controls.Add(_teachingPanel, 0, 0);
@@ -797,12 +797,12 @@ public sealed class MainForm : Form
 
         _teachingPrimaryLabel.AutoSize = true;
         _teachingPrimaryLabel.Font = new Font("Microsoft YaHei UI", 9, FontStyle.Bold);
-        _teachingPrimaryLabel.ForeColor = Color.FromArgb(22, 94, 74);
+        _teachingPrimaryLabel.ForeColor = UiThemePalette.AccentStrong;
         _teachingPrimaryLabel.Margin = new Padding(0, 0, 0, 3);
         teachingLayout.Controls.Add(_teachingPrimaryLabel, 0, 0);
 
         _teachingSecondaryLabel.AutoSize = true;
-        _teachingSecondaryLabel.ForeColor = Color.FromArgb(57, 83, 76);
+        _teachingSecondaryLabel.ForeColor = UiThemePalette.TextSecondary;
         _teachingSecondaryLabel.Margin = Padding.Empty;
         teachingLayout.Controls.Add(_teachingSecondaryLabel, 0, 1);
 
@@ -6177,7 +6177,6 @@ public sealed class MainForm : Form
             Margin = Padding.Empty
         };
         UiThemePalette.EnableDoubleBuffering(panel);
-        UiThemePalette.AttachBorderPainter(panel);
         return panel;
     }
 
@@ -6360,9 +6359,8 @@ public sealed class MainForm : Form
 
     private int GetCurrentIconSize(DataGridView grid, DataGridViewImageColumn column)
     {
-        var recommended = ApplicationIconCache.GetRecommendedIconSizeForDpi(DeviceDpi, logicalSize: 18);
         var displayBudget = ResolveIconDisplayBudget(grid, column);
-        return ApplicationIconCache.GetRecommendedIconSize(Math.Min(recommended, displayBudget));
+        return ApplicationIconCache.GetRecommendedIconSizeForDpiWithinBudget(DeviceDpi, logicalSize: 18, displayBudget);
     }
 
     private static int ResolveIconColumnWidth(int iconSize)

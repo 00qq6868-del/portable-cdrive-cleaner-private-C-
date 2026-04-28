@@ -8,21 +8,26 @@ namespace PortableCDriveCleaner.Infrastructure;
 
 public static class UiThemePalette
 {
-    public static Color WindowBackground => Color.FromArgb(3, 5, 7);
-    public static Color Surface => Color.FromArgb(9, 12, 16);
-    public static Color SurfaceRaised => Color.FromArgb(14, 18, 22);
-    public static Color SurfaceMuted => Color.FromArgb(7, 10, 13);
-    public static Color Border => Color.FromArgb(34, 41, 48);
-    public static Color BorderStrong => Color.FromArgb(52, 61, 70);
+    public static Color WindowBackground => Color.FromArgb(4, 6, 9);
+    public static Color Surface => Color.FromArgb(7, 10, 14);
+    public static Color SurfaceRaised => Color.FromArgb(11, 16, 21);
+    public static Color SurfaceMuted => Color.FromArgb(5, 8, 11);
+    public static Color SurfaceHeader => Color.FromArgb(13, 19, 25);
+    public static Color SurfaceHover => Color.FromArgb(16, 23, 30);
+    public static Color Border => Color.FromArgb(26, 34, 42);
+    public static Color BorderMuted => Color.FromArgb(18, 25, 32);
+    public static Color BorderStrong => Color.FromArgb(41, 52, 63);
+    public static Color GridLine => Color.FromArgb(24, 31, 38);
     public static Color TextPrimary => Color.FromArgb(240, 244, 247);
     public static Color TextSecondary => Color.FromArgb(184, 193, 201);
     public static Color TextMuted => Color.FromArgb(132, 143, 151);
     public static Color DisabledText => Color.FromArgb(108, 118, 125);
-    public static Color Accent => Color.FromArgb(45, 201, 111);
-    public static Color AccentStrong => Color.FromArgb(75, 221, 139);
-    public static Color AccentSurface => Color.FromArgb(12, 34, 24);
-    public static Color AccentSurfaceRaised => Color.FromArgb(16, 42, 30);
-    public static Color Selection => Color.FromArgb(23, 49, 35);
+    public static Color Accent => Color.FromArgb(49, 208, 122);
+    public static Color AccentStrong => Color.FromArgb(105, 240, 174);
+    public static Color AccentSoftBorder => Color.FromArgb(48, 125, 86);
+    public static Color AccentSurface => Color.FromArgb(9, 30, 21);
+    public static Color AccentSurfaceRaised => Color.FromArgb(12, 39, 27);
+    public static Color Selection => Color.FromArgb(14, 45, 31);
     public static Color SelectionText => TextPrimary;
     public static Color Warning => Color.FromArgb(238, 185, 73);
     public static Color WarningSurface => Color.FromArgb(56, 44, 17);
@@ -55,7 +60,10 @@ public static class UiThemePalette
     {
         panel.BackColor = raised ? SurfaceRaised : Surface;
         EnableDoubleBuffering(panel);
-        AttachBorderPainter(panel);
+        if (raised)
+        {
+            AttachBorderPainter(panel, BorderMuted);
+        }
     }
 
     public static void EnableDoubleBuffering(Control control)
@@ -190,26 +198,51 @@ public static class UiThemePalette
     public static void ApplyDataGridTheme(DataGridView grid)
     {
         grid.BackgroundColor = Surface;
-        grid.GridColor = Border;
+        grid.GridColor = GridLine;
         grid.BorderStyle = BorderStyle.None;
+        grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+        grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+        grid.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
         grid.EnableHeadersVisualStyles = false;
-        grid.ColumnHeadersDefaultCellStyle.BackColor = SurfaceRaised;
+        ApplyDataGridBorderModel(grid);
+
+        grid.ColumnHeadersDefaultCellStyle.BackColor = SurfaceHeader;
         grid.ColumnHeadersDefaultCellStyle.ForeColor = TextPrimary;
-        grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = SurfaceRaised;
+        grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = SurfaceHeader;
         grid.ColumnHeadersDefaultCellStyle.SelectionForeColor = TextPrimary;
+        grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(0, 2, 0, 2);
         grid.DefaultCellStyle.BackColor = Surface;
         grid.DefaultCellStyle.ForeColor = TextSecondary;
         grid.DefaultCellStyle.SelectionBackColor = Selection;
         grid.DefaultCellStyle.SelectionForeColor = SelectionText;
+        grid.DefaultCellStyle.Padding = new Padding(0, 0, 0, 0);
         grid.AlternatingRowsDefaultCellStyle.BackColor = SurfaceMuted;
         grid.AlternatingRowsDefaultCellStyle.ForeColor = TextSecondary;
         grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = Selection;
         grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = SelectionText;
-        grid.RowHeadersDefaultCellStyle.BackColor = SurfaceRaised;
+        grid.RowHeadersDefaultCellStyle.BackColor = SurfaceHeader;
         grid.RowHeadersDefaultCellStyle.ForeColor = TextSecondary;
         grid.RowHeadersDefaultCellStyle.SelectionBackColor = Selection;
         grid.RowHeadersDefaultCellStyle.SelectionForeColor = SelectionText;
         grid.DefaultCellStyle.NullValue = string.Empty;
+    }
+
+    private static void ApplyDataGridBorderModel(DataGridView grid)
+    {
+        try
+        {
+            grid.AdvancedCellBorderStyle.Left = DataGridViewAdvancedCellBorderStyle.None;
+            grid.AdvancedCellBorderStyle.Right = DataGridViewAdvancedCellBorderStyle.None;
+            grid.AdvancedCellBorderStyle.Top = DataGridViewAdvancedCellBorderStyle.None;
+            grid.AdvancedCellBorderStyle.Bottom = DataGridViewAdvancedCellBorderStyle.Single;
+            grid.AdvancedColumnHeadersBorderStyle.Left = DataGridViewAdvancedCellBorderStyle.None;
+            grid.AdvancedColumnHeadersBorderStyle.Right = DataGridViewAdvancedCellBorderStyle.None;
+            grid.AdvancedColumnHeadersBorderStyle.Top = DataGridViewAdvancedCellBorderStyle.None;
+            grid.AdvancedColumnHeadersBorderStyle.Bottom = DataGridViewAdvancedCellBorderStyle.Single;
+        }
+        catch
+        {
+        }
     }
 
     public static void ApplyTreeTheme(Control root)
@@ -376,8 +409,8 @@ public static class UiThemePalette
             const int DwmwaTextColor = 36;
 
             var enabled = 1;
-            var captionColor = ColorTranslator.ToWin32(Surface);
-            var borderColor = ColorTranslator.ToWin32(Border);
+            var captionColor = ColorTranslator.ToWin32(WindowBackground);
+            var borderColor = ColorTranslator.ToWin32(BorderMuted);
             var textColor = ColorTranslator.ToWin32(TextPrimary);
 
             DwmSetWindowAttribute(handle, DwmwaUseImmersiveDarkMode, ref enabled, sizeof(int));
