@@ -4,7 +4,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$InstalledExe,
     [string]$PublishScript = "E:\vscode Claude\PortableCDriveCleaner\publish.ps1",
-    [int]$LaunchTimeoutSeconds = 45
+    [int]$LaunchTimeoutSeconds = 45,
+    [ValidateSet("CleanupCandidates", "CDriveOverview", "InfrequentApps")]
+    [string]$QaView = "InfrequentApps"
 )
 
 Set-StrictMode -Version Latest
@@ -229,7 +231,8 @@ function Invoke-OneCycle {
         [string]$ExpectedTitle,
         [string]$PublishScriptPath,
         [int]$TimeoutSeconds,
-        [string]$OutputRoot
+        [string]$OutputRoot,
+        [string]$QaViewMode
     )
 
     $cycleRoot = Join-Path $OutputRoot ("cycle-" + $CycleIndex.ToString("00"))
@@ -237,7 +240,8 @@ function Invoke-OneCycle {
     Reinstall-PortableBuild -SourceExe $SourceExe -TargetExe $TargetExe -PublishScriptPath $PublishScriptPath
 
     $launchStarted = Get-Date
-    $process = Start-Process -FilePath $TargetExe -PassThru
+    $launchArgs = @("--readonly", "--skip-migration-prompt", "--qa-view", $QaViewMode)
+    $process = Start-Process -FilePath $TargetExe -ArgumentList $launchArgs -PassThru
     $windowProcess = Wait-AppMainWindowProcess -InstalledExePath $TargetExe -TimeoutSeconds $TimeoutSeconds
     if ($null -eq $windowProcess) {
         throw ("Cycle {0}: main window not found within {1} seconds." -f $CycleIndex, $TimeoutSeconds)
@@ -263,6 +267,19 @@ function Invoke-OneCycle {
     Start-Sleep -Seconds 12
     $settledShot = Join-Path $cycleRoot "04-settled.png"
     Save-WindowScreenshot -Handle $handle -OutputPath $settledShot
+    $settledMetrics = Get-WindowMetrics -Handle $handle
+
+    Resize-AppWindow -Handle $handle -Width 1380 -Height 930
+    Start-Sleep -Seconds 4
+    $populatedLargeShot = Join-Path $cycleRoot "05-populated-large.png"
+    Save-WindowScreenshot -Handle $handle -OutputPath $populatedLargeShot
+    $populatedLargeMetrics = Get-WindowMetrics -Handle $handle
+
+    Resize-AppWindow -Handle $handle -Width 1220 -Height 760
+    Start-Sleep -Seconds 4
+    $populatedSmallShot = Join-Path $cycleRoot "06-populated-small.png"
+    Save-WindowScreenshot -Handle $handle -OutputPath $populatedSmallShot
+    $populatedSmallMetrics = Get-WindowMetrics -Handle $handle
 
     Start-Sleep -Seconds 1
     $closedNormally = Close-AppWindow -Process $windowProcess -Handle $handle
@@ -284,12 +301,22 @@ function Invoke-OneCycle {
         LargeHeight = $largeMetrics.Height
         SmallWidth = $smallMetrics.Width
         SmallHeight = $smallMetrics.Height
+        SettledWidth = $settledMetrics.Width
+        SettledHeight = $settledMetrics.Height
+        PopulatedLargeWidth = $populatedLargeMetrics.Width
+        PopulatedLargeHeight = $populatedLargeMetrics.Height
+        PopulatedSmallWidth = $populatedSmallMetrics.Width
+        PopulatedSmallHeight = $populatedSmallMetrics.Height
+        QaView = $QaViewMode
+        LaunchArguments = $launchArgs
         ClosedNormally = $closedNormally
         ResidualProcess = $stillRunning
         LaunchScreenshot = $launchShot
         LargeScreenshot = $largeShot
         SmallScreenshot = $smallShot
         SettledScreenshot = $settledShot
+        PopulatedLargeScreenshot = $populatedLargeShot
+        PopulatedSmallScreenshot = $populatedSmallShot
         Verdict = if (-not $closedNormally -or $stillRunning) { "FAIL" } else { "PASS_PENDING_VISUAL" }
     }
 
@@ -314,12 +341,13 @@ $environmentReport = [pscustomobject]@{
     PublishedExe = $PublishedExe
     InstalledExe = $InstalledExe
     PublishScript = $PublishScript
+    QaView = $QaView
 }
 $environmentReport | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $outputRoot "environment.json") -Encoding UTF8
 
 $results = New-Object System.Collections.Generic.List[object]
 for ($i = 1; $i -le $Cycles; $i++) {
-    $results.Add((Invoke-OneCycle -CycleIndex $i -SourceExe $PublishedExe -TargetExe $InstalledExe -ExpectedTitle "" -PublishScriptPath $PublishScript -TimeoutSeconds $LaunchTimeoutSeconds -OutputRoot $outputRoot))
+    $results.Add((Invoke-OneCycle -CycleIndex $i -SourceExe $PublishedExe -TargetExe $InstalledExe -ExpectedTitle "" -PublishScriptPath $PublishScript -TimeoutSeconds $LaunchTimeoutSeconds -OutputRoot $outputRoot -QaViewMode $QaView))
 }
 
 $resultItems = $results.ToArray()
@@ -328,6 +356,7 @@ $summary = [pscustomobject]@{
     Timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
     OutputRoot = $outputRoot
     Cycles = $Cycles
+    QaView = $QaView
     Results = $resultItems
     AllCyclesClosedCleanly = (@($resultItems | Where-Object { -not $_.ClosedNormally -or $_.ResidualProcess }).Count -eq 0)
     VisualReviewRequired = $true

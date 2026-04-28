@@ -160,7 +160,10 @@ internal static class Program
             initialSnapshot,
             readOnlyMode,
             launchDiagnostics.DisplayText,
-            launchDiagnostics.ToolTipText));
+            launchDiagnostics.ToolTipText,
+            startupViewOverride: options.QaViewMode,
+            preserveStartupView: options.QaViewMode.HasValue,
+            persistWindowState: !options.QaViewMode.HasValue));
     }
 
     private static bool IsInstallerLaunch(PortableContext context, CommandLineOptions options)

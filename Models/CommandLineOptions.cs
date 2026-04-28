@@ -10,6 +10,7 @@ public sealed class CommandLineOptions
     public bool AutoSafeOnly { get; init; }
     public bool NoPrompt { get; init; }
     public string? SelectionFile { get; init; }
+    public MainViewMode? QaViewMode { get; init; }
 
     public static CommandLineOptions Parse(string[] args)
     {
@@ -21,6 +22,7 @@ public sealed class CommandLineOptions
         var autoSafeOnly = false;
         var noPrompt = false;
         string? selectionFile = null;
+        MainViewMode? qaViewMode = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -54,6 +56,12 @@ public sealed class CommandLineOptions
                         selectionFile = args[++i];
                     }
                     break;
+                case "--qa-view":
+                    if (i + 1 < args.Length && Enum.TryParse<MainViewMode>(args[++i], ignoreCase: true, out var parsedQaViewMode))
+                    {
+                        qaViewMode = parsedQaViewMode;
+                    }
+                    break;
             }
         }
 
@@ -66,7 +74,8 @@ public sealed class CommandLineOptions
             Scheduled = scheduled,
             AutoSafeOnly = autoSafeOnly,
             NoPrompt = noPrompt,
-            SelectionFile = selectionFile
+            SelectionFile = selectionFile,
+            QaViewMode = qaViewMode
         };
     }
 }

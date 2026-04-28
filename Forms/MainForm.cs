@@ -14,8 +14,8 @@ public sealed class MainForm : Form
     private const int MinimumWindowWidth = 1220;
     private const int MinimumWindowHeight = 760;
     private const int WideModeThreshold = 1500;
-    private const int CompactLayoutHeightThreshold = 1120;
-    private const int UltraCompactLayoutHeightThreshold = 920;
+    private const int CompactLayoutHeightThreshold = 1180;
+    private const int UltraCompactLayoutHeightThreshold = 980;
     private const int TeachingSecondaryHideHeightThreshold = 900;
     private const int ResizeRefreshIntervalMilliseconds = 140;
     private const int JobCenterPassiveRefreshIntervalMilliseconds = 1000;
@@ -46,6 +46,8 @@ public sealed class MainForm : Form
     private readonly SnapshotCacheService _snapshotCacheService;
     private readonly OperationManager _operationManager;
     private readonly bool _readOnlyMode;
+    private readonly bool _preserveStartupView;
+    private readonly bool _persistWindowState;
 
     private readonly TableLayoutPanel _rootLayout = new();
     private readonly Panel _headerPanel = CreateSurfacePanel();
@@ -192,7 +194,10 @@ public sealed class MainForm : Form
         ScanSnapshot? initialSnapshot = null,
         bool readOnlyMode = false,
         string runtimeInfoText = "",
-        string runtimeInfoToolTip = "")
+        string runtimeInfoToolTip = "",
+        MainViewMode? startupViewOverride = null,
+        bool preserveStartupView = false,
+        bool persistWindowState = true)
     {
         _context = context;
         _settingsService = settingsService;
@@ -205,9 +210,11 @@ public sealed class MainForm : Form
         _operationManager = operationManager;
         _settings = settings;
         _readOnlyMode = readOnlyMode;
-        _viewMode = Enum.TryParse<MainViewMode>(_settings.LastViewMode, out var savedViewMode)
+        _preserveStartupView = preserveStartupView;
+        _persistWindowState = persistWindowState;
+        _viewMode = startupViewOverride ?? (Enum.TryParse<MainViewMode>(_settings.LastViewMode, out var savedViewMode)
             ? savedViewMode
-            : MainViewMode.CleanupCandidates;
+            : MainViewMode.CleanupCandidates);
         _runtimeInfoLabel.Text = runtimeInfoText;
         _runtimeInfoLabel.Tag = runtimeInfoText;
         if (!string.IsNullOrWhiteSpace(runtimeInfoToolTip))
@@ -260,7 +267,10 @@ public sealed class MainForm : Form
             _overviewIconLoadCts?.Cancel();
             _jobCenterRefreshTimer.Stop();
             _resizeRefreshTimer.Stop();
-            PersistWindowState();
+            if (_persistWindowState)
+            {
+                PersistWindowState();
+            }
         };
         ResizeBegin += (_, _) =>
         {
@@ -2124,6 +2134,7 @@ public sealed class MainForm : Form
         _driveTabsFlow.Visible = _viewMode != MainViewMode.CDriveOverview;
         if (_viewMode == MainViewMode.CDriveOverview)
         {
+            ApplyDataFirstVisibility();
             return;
         }
 
@@ -2156,6 +2167,7 @@ public sealed class MainForm : Form
         UpdateDriveButtonStyles();
         RefreshPillButtonSizing();
         _driveTabsFlow.ResumeLayout();
+        ApplyDataFirstVisibility();
     }
 
     private void UpdateTeachingStrip()
@@ -2431,6 +2443,7 @@ public sealed class MainForm : Form
         var inCandidateView = _viewMode == MainViewMode.CleanupCandidates;
         var inInfrequentView = _viewMode == MainViewMode.InfrequentApps;
         var hasActiveScan = _operationManager.HasActiveJob(OperationJobKind.Scan);
+        var dataFirst = IsUltraCompactLayout;
         _cleanSelectedButton.Enabled = !_isBusy && !_readOnlyMode && ((inCandidateView && selectedCount > 0) || (inInfrequentView && selectedInfrequentCount > 0));
         _recommendedButton.Enabled = !_isBusy && !_readOnlyMode && ((inCandidateView && _allRows.Count > 0) || (inInfrequentView && _infrequentRows.Count > 0));
         _safeCleanButton.Enabled = !_isBusy && !_readOnlyMode && inCandidateView && _visibleRows.Any(row => row.Item.SafeAuto && row.Item.ImpactSeverity == CleanupImpactSeverity.Low);
@@ -2446,6 +2459,9 @@ public sealed class MainForm : Form
         _cDriveAdviceButton.Enabled = true;
         _moreActionsButton.Enabled = true;
         _whitelistButton.Enabled = !_isBusy && GetWhitelistSelectionCount() > 0;
+        _scheduleSettingsButton.Visible = !dataFirst;
+        _whitelistButton.Visible = !dataFirst;
+        _moreActionsButton.Visible = !dataFirst;
         _cleanupViewButton.Enabled = true;
         _overviewViewButton.Enabled = true;
         _infrequentViewButton.Enabled = true;
@@ -2458,6 +2474,7 @@ public sealed class MainForm : Form
         };
         _clearSelectionMenuItem.Enabled = !_isBusy && !_readOnlyMode && (selectedCount > 0 || selectedInfrequentCount > 0 || selectedMigrationCount > 0);
         _quickFiltersHost.Visible = inCandidateView;
+        ApplyDataFirstVisibility();
     }
 
     private void UpdateScheduleStatus()
@@ -3936,7 +3953,7 @@ public sealed class MainForm : Form
         UpdateDriveTabs();
         UpdateScheduleStatus();
 
-        if (_viewMode != MainViewMode.CleanupCandidates && snapshot.CleanupItems.Count > 0)
+        if (!_preserveStartupView && _viewMode != MainViewMode.CleanupCandidates && snapshot.CleanupItems.Count > 0)
         {
             _deferredStartupViewMode = _viewMode;
             _viewMode = MainViewMode.CleanupCandidates;
@@ -4696,6 +4713,7 @@ public sealed class MainForm : Form
             _teachingPanel.Visible = !ultraCompact;
             _teachingSecondaryLabel.Visible = !ultraCompact && (!compact || ClientSize.Height > TeachingSecondaryHideHeightThreshold);
             _selectionHintLabel.Visible = !ultraCompact;
+            ApplyDataFirstVisibility();
 
             ApplyControlFont(_headerTitleLabel, ultraCompact ? 12.6f : compact ? 13.6f : 15f, FontStyle.Bold);
             ApplyControlFont(_headerModeLabel, ultraCompact ? 7.7f : compact ? 8.1f : 8.5f, FontStyle.Bold);
@@ -4772,6 +4790,28 @@ public sealed class MainForm : Form
         panel.Margin = margin;
     }
 
+    private void ApplyDataFirstVisibility()
+    {
+        if (IsUltraCompactLayout)
+        {
+            // UltraCompact is a data-first mode: hide optional teaching/filter rows instead of starving the grid.
+            _driveTabsPanel.Visible = false;
+            _filtersPanel.Visible = false;
+            _teachingPanel.Visible = false;
+            _teachingSecondaryLabel.Visible = false;
+            _selectionHintLabel.Visible = false;
+            _quickFiltersHost.Visible = false;
+            return;
+        }
+
+        _driveTabsPanel.Visible = true;
+        _filtersPanel.Visible = true;
+        _teachingPanel.Visible = true;
+        _teachingSecondaryLabel.Visible = !IsCompactLayout || ClientSize.Height > TeachingSecondaryHideHeightThreshold;
+        _selectionHintLabel.Visible = !IsCompactLayout;
+        _quickFiltersHost.Visible = _viewMode == MainViewMode.CleanupCandidates;
+    }
+
     private static void ApplyButtonFont(Button button, bool compactLayout, bool ultraCompactLayout, FontStyle? styleOverride = null, bool compactQuickFilter = false)
     {
         var fontSize = ultraCompactLayout
@@ -4821,6 +4861,7 @@ public sealed class MainForm : Form
         ReloadDynamicIconsForCurrentDpi();
         RefreshScaledUi(forceLayout: true);
         FlushPendingVisualRefreshes();
+        ForceCleanRepaintAfterResize();
     }
 
     private void FlushDeferredResizeRefresh(bool forceLayout = false)
@@ -4841,6 +4882,10 @@ public sealed class MainForm : Form
         _pendingResizeForceLayout = false;
         RefreshScaledUi(forceLayout: needsLayoutRefresh, refreshGridContent: !_resizeDragInProgress || forceLayout);
         FlushPendingVisualRefreshes();
+        if (forceLayout || needsLayoutRefresh)
+        {
+            ForceCleanRepaintAfterResize();
+        }
     }
 
     private void SuspendResizeSensitiveLayout()
@@ -5025,6 +5070,46 @@ public sealed class MainForm : Form
         catch
         {
         }
+    }
+
+    private void ForceCleanRepaintAfterResize()
+    {
+        if (IsDisposed || !IsHandleCreated || _resizeDragInProgress)
+        {
+            return;
+        }
+
+        try
+        {
+            _rootLayout.PerformLayout();
+            _contentPanel.PerformLayout();
+            GetActiveContentControl().PerformLayout();
+            RedrawNow(Handle);
+            RedrawNow(_rootLayout.Handle);
+            RedrawNow(_contentPanel.Handle);
+            RedrawNow(GetActiveContentControl().Handle);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void RedrawNow(IntPtr handle)
+    {
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        NativeMethods.RedrawWindow(
+            handle,
+            IntPtr.Zero,
+            IntPtr.Zero,
+            NativeMethods.RdwInvalidate
+            | NativeMethods.RdwErase
+            | NativeMethods.RdwAllChildren
+            | NativeMethods.RdwUpdateNow
+            | NativeMethods.RdwFrame);
     }
 
     private static string BuildCompactDriveSummaryText(string fullText)
@@ -6395,9 +6480,17 @@ public sealed class MainForm : Form
     private static class NativeMethods
     {
         public const int WmSetRedraw = 0x000B;
+        public const int RdwInvalidate = 0x0001;
+        public const int RdwErase = 0x0004;
+        public const int RdwAllChildren = 0x0080;
+        public const int RdwUpdateNow = 0x0100;
+        public const int RdwFrame = 0x0400;
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         public static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, int flags);
     }
 
     private sealed record FilterOption(string Value, string Text)
