@@ -806,3 +806,21 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-28 22:30:41
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：商业级图标清晰度、缩放稳定、视觉质感闭环
+- 检查点模式：Progress
+- 已完成：
+  - 三轮 QA 2026-04-28_222239 已执行并按硬门槛 FAIL：qa-state.json 已成功写出，证明缓存加载有效，SnapshotInfrequentRows=49；失败点变为 ActiveVisibleRows=1。原因是 UI 当前筛选状态把 InfrequentApps 限制到 C 盘和/或推荐状态，验收视图没有清空筛选。下一步修复 QA 模式下筛选初始化为全部盘、全部状态、全部可信度、无搜索，再重新跑完整三轮。
+- 修改文件：
+- artifacts/icon-qa/2026-04-28_222239
+- 剩余项：
+- 修复 QA 模式筛选初始化；build；checkpoint；重新三轮 QA；检查截图和图标
+- 检查点文件：
+  - checkpoints/2026-04-28_223041_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
