@@ -5,18 +5,18 @@
     "current_phase":  "历史问题收口 + 主窗口小窗布局继续收口",
     "current_task":  "商业级体验收口第三轮：真实图标验收、缩放叠影、小窗数据区",
     "task_status":  "in_progress",
-    "last_completed_step":  "已完成第三轮第一批代码修改并通过 dotnet build：新增 --qa-view 真实图标验收入口；QA 脚本默认只读启动并强制进入 InfrequentApps，新增 populated large/small 截图；主窗 UltraCompact 阈值提高并进入数据优先模式，隐藏小窗次要盘符/筛选/教学行；缩放结束后增加 RedrawWindow 干净重绘。尚未完成安装版三轮 QA 和截图人眼验收。",
-    "in_progress_step":  "发布安装版；运行 3 轮完整 QA；检查 04-settled/05-populated-large/06-populated-small 是否仍有叠影、图标模糊、小窗数据不足；写回最终 checkpoint",
-    "next_step":  "发布安装版；运行 3 轮完整 QA；检查 04-settled/05-populated-large/06-populated-small 是否仍有叠影、图标模糊、小窗数据不足；写回最终 checkpoint",
+    "last_completed_step":  "发现并修正第三轮关键根因：175% DPI 下布局密度阈值直接使用 ClientSize.Height，导致视觉小窗仍被当成大窗，UltraCompact 未触发，教学/筛选/盘符/任务卡没有折叠。已改为按 DeviceDpi 把 ClientSize.Height 归一化到 96DPI 后再判断 Regular/Compact/UltraCompact，并通过 dotnet build。上一轮 QA 截图因此不能算通过，需要重新跑三轮安装版 QA。",
+    "in_progress_step":  "重新运行安装版 3 轮 QA；检查小窗是否真正隐藏次要行并显示更多数据；检查真实图标列表是否可见；检查缩放稳定态是否还有叠影",
+    "next_step":  "重新运行安装版 3 轮 QA；检查小窗是否真正隐藏次要行并显示更多数据；检查真实图标列表是否可见；检查缩放稳定态是否还有叠影",
     "pending_items":  [
-                          "发布安装版；运行 3 轮完整 QA；检查 04-settled/05-populated-large/06-populated-small 是否仍有叠影、图标模糊、小窗数据不足；写回最终 checkpoint"
+                          "重新运行安装版 3 轮 QA；检查小窗是否真正隐藏次要行并显示更多数据；检查真实图标列表是否可见；检查缩放稳定态是否还有叠影"
                       ],
     "modified_files":  [
-                           "Forms/MainForm.cs;Models/CommandLineOptions.cs;Program.cs;tools/Run-Icon-Clarity-QA.ps1"
+                           "Forms/MainForm.cs"
                        ],
-    "last_checkpoint_time":  "2026-04-28 21:19:03",
-    "last_commit":  "4b0e693",
+    "last_checkpoint_time":  "2026-04-28 21:27:51",
+    "last_commit":  "835ce1d",
     "push_status":  "push_requested",
     "branch":  "main",
-    "latest_checkpoint":  "checkpoints/2026-04-28_211903_progress.md"
+    "latest_checkpoint":  "checkpoints/2026-04-28_212751_progress.md"
 }

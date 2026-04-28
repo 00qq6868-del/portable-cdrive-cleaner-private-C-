@@ -698,3 +698,21 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-28 21:27:51
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：商业级体验收口第三轮：真实图标验收、缩放叠影、小窗数据区
+- 检查点模式：Progress
+- 已完成：
+  - 发现并修正第三轮关键根因：175% DPI 下布局密度阈值直接使用 ClientSize.Height，导致视觉小窗仍被当成大窗，UltraCompact 未触发，教学/筛选/盘符/任务卡没有折叠。已改为按 DeviceDpi 把 ClientSize.Height 归一化到 96DPI 后再判断 Regular/Compact/UltraCompact，并通过 dotnet build。上一轮 QA 截图因此不能算通过，需要重新跑三轮安装版 QA。
+- 修改文件：
+- Forms/MainForm.cs
+- 剩余项：
+- 重新运行安装版 3 轮 QA；检查小窗是否真正隐藏次要行并显示更多数据；检查真实图标列表是否可见；检查缩放稳定态是否还有叠影
+- 检查点文件：
+  - checkpoints/2026-04-28_212751_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA

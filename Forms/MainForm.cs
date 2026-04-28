@@ -4668,14 +4668,21 @@ public sealed class MainForm : Form
 
     private LayoutDensityMode ResolveLayoutDensityMode()
     {
-        if (ClientSize.Height <= UltraCompactLayoutHeightThreshold)
+        var normalizedHeight = GetDpiNormalizedClientHeight();
+        if (normalizedHeight <= UltraCompactLayoutHeightThreshold)
         {
             return LayoutDensityMode.UltraCompact;
         }
 
-        return ClientSize.Height <= CompactLayoutHeightThreshold
+        return normalizedHeight <= CompactLayoutHeightThreshold
             ? LayoutDensityMode.Compact
             : LayoutDensityMode.Regular;
+    }
+
+    private int GetDpiNormalizedClientHeight()
+    {
+        var dpi = DeviceDpi > 0 ? DeviceDpi : 96;
+        return (int)Math.Round(ClientSize.Height * 96d / dpi);
     }
 
     private void ApplyLayoutDensity(bool force = false)
@@ -4711,7 +4718,7 @@ public sealed class MainForm : Form
             _teachingPanel.Padding = ultraCompact ? new Padding(5, 3, 5, 3) : compact ? new Padding(10, 6, 10, 6) : new Padding(12, 8, 12, 8);
             _teachingPanel.Margin = ultraCompact ? new Padding(0, 0, 0, 2) : compact ? new Padding(0, 0, 0, 6) : new Padding(0, 0, 0, 8);
             _teachingPanel.Visible = !ultraCompact;
-            _teachingSecondaryLabel.Visible = !ultraCompact && (!compact || ClientSize.Height > TeachingSecondaryHideHeightThreshold);
+            _teachingSecondaryLabel.Visible = !ultraCompact && (!compact || GetDpiNormalizedClientHeight() > TeachingSecondaryHideHeightThreshold);
             _selectionHintLabel.Visible = !ultraCompact;
             ApplyDataFirstVisibility();
 
@@ -4807,7 +4814,7 @@ public sealed class MainForm : Form
         _driveTabsPanel.Visible = true;
         _filtersPanel.Visible = true;
         _teachingPanel.Visible = true;
-        _teachingSecondaryLabel.Visible = !IsCompactLayout || ClientSize.Height > TeachingSecondaryHideHeightThreshold;
+        _teachingSecondaryLabel.Visible = !IsCompactLayout || GetDpiNormalizedClientHeight() > TeachingSecondaryHideHeightThreshold;
         _selectionHintLabel.Visible = !IsCompactLayout;
         _quickFiltersHost.Visible = _viewMode == MainViewMode.CleanupCandidates;
     }
