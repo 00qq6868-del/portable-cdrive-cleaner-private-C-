@@ -1660,6 +1660,12 @@ public sealed class MainForm : Form
 
     private void EnsureActiveDriveSelection()
     {
+        if (_disableStartupRefresh && _viewMode == MainViewMode.InfrequentApps)
+        {
+            _filterState.SelectedDrive = DriveAllKey;
+            return;
+        }
+
         var drives = (_viewMode == MainViewMode.InfrequentApps
                 ? _infrequentRows.Select(row => row.PrimaryDrive)
                 : _allRows.Select(row => row.DriveName))
@@ -5652,6 +5658,11 @@ public sealed class MainForm : Form
         else if (_viewMode == MainViewMode.InfrequentApps)
         {
             _searchTextBox.PlaceholderText = "搜软件名、路径、使用证据、建议";
+            if (_disableStartupRefresh)
+            {
+                _searchTextBox.Text = string.Empty;
+            }
+
             _categoryFilterLabel.Visible = true;
             _categoryComboBox.Visible = true;
             _modeFilterLabel.Visible = true;
@@ -5685,11 +5696,15 @@ public sealed class MainForm : Form
             _sortComboBox.Items.Add(new FilterOption(CleanupFilterState.SortSizeDesc, "体积从大到小"));
             _sortComboBox.Items.Add(new FilterOption(CleanupFilterState.SortNameAsc, "名称 A-Z"));
 
-            SelectComboBoxValue(_categoryComboBox, string.IsNullOrWhiteSpace(_settings.InfrequentAppsViewLastFilter) ? "recommended" : _settings.InfrequentAppsViewLastFilter);
+            var qaAllRowsMode = _disableStartupRefresh;
+            SelectComboBoxValue(_categoryComboBox, qaAllRowsMode || string.IsNullOrWhiteSpace(_settings.InfrequentAppsViewLastFilter)
+                ? CleanupFilterState.AllValue
+                : _settings.InfrequentAppsViewLastFilter);
             SelectComboBoxValue(_modeComboBox, CleanupFilterState.AllValue);
             SelectComboBoxValue(_sortComboBox, CleanupFilterState.SortSmart);
             _filterState.SelectedCategory = GetComboBoxValue(_categoryComboBox);
             _filterState.SelectedAutoMode = CleanupFilterState.AllValue;
+            _filterState.SearchText = string.Empty;
             _filterState.SortMode = CleanupFilterState.SortSmart;
         }
         else

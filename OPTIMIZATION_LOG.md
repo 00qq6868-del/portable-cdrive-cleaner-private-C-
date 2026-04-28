@@ -824,3 +824,21 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-28 22:32:27
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：商业级图标清晰度、缩放稳定、视觉质感闭环
+- 检查点模式：Progress
+- 已完成：
+  - 已修复 QA 模式下 InfrequentApps 验收视图的筛选问题：QA 启动时强制全部盘、全部状态、全部可信度、清空搜索，不再被默认 C 盘或上次推荐筛选压成 1 项。dotnet build 0 错误 0 警告通过。下一步重新跑完整三轮安装版 QA。
+- 修改文件：
+- Forms/MainForm.cs
+- 剩余项：
+- 重新跑 3 轮 QA；确认 ActiveVisibleRows >= 3 且 SnapshotInfrequentRows=49；人工检查截图图标清晰度和视觉质感
+- 检查点文件：
+  - checkpoints/2026-04-28_223227_progress.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA

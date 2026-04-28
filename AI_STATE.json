@@ -5,18 +5,18 @@
     "current_phase":  "历史问题收口 + 主窗口小窗布局继续收口",
     "current_task":  "商业级图标清晰度、缩放稳定、视觉质感闭环",
     "task_status":  "in_progress",
-    "last_completed_step":  "三轮 QA 2026-04-28_222239 已执行并按硬门槛 FAIL：qa-state.json 已成功写出，证明缓存加载有效，SnapshotInfrequentRows=49；失败点变为 ActiveVisibleRows=1。原因是 UI 当前筛选状态把 InfrequentApps 限制到 C 盘和/或推荐状态，验收视图没有清空筛选。下一步修复 QA 模式下筛选初始化为全部盘、全部状态、全部可信度、无搜索，再重新跑完整三轮。",
-    "in_progress_step":  "修复 QA 模式筛选初始化；build；checkpoint；重新三轮 QA；检查截图和图标",
-    "next_step":  "修复 QA 模式筛选初始化；build；checkpoint；重新三轮 QA；检查截图和图标",
+    "last_completed_step":  "已修复 QA 模式下 InfrequentApps 验收视图的筛选问题：QA 启动时强制全部盘、全部状态、全部可信度、清空搜索，不再被默认 C 盘或上次推荐筛选压成 1 项。dotnet build 0 错误 0 警告通过。下一步重新跑完整三轮安装版 QA。",
+    "in_progress_step":  "重新跑 3 轮 QA；确认 ActiveVisibleRows \u003e= 3 且 SnapshotInfrequentRows=49；人工检查截图图标清晰度和视觉质感",
+    "next_step":  "重新跑 3 轮 QA；确认 ActiveVisibleRows \u003e= 3 且 SnapshotInfrequentRows=49；人工检查截图图标清晰度和视觉质感",
     "pending_items":  [
-                          "修复 QA 模式筛选初始化；build；checkpoint；重新三轮 QA；检查截图和图标"
+                          "重新跑 3 轮 QA；确认 ActiveVisibleRows \u003e= 3 且 SnapshotInfrequentRows=49；人工检查截图图标清晰度和视觉质感"
                       ],
     "modified_files":  [
-                           "artifacts/icon-qa/2026-04-28_222239"
+                           "Forms/MainForm.cs"
                        ],
-    "last_checkpoint_time":  "2026-04-28 22:30:41",
-    "last_commit":  "c947b71",
+    "last_checkpoint_time":  "2026-04-28 22:32:27",
+    "last_commit":  "154cf7e",
     "push_status":  "push_requested",
     "branch":  "main",
-    "latest_checkpoint":  "checkpoints/2026-04-28_223041_progress.md"
+    "latest_checkpoint":  "checkpoints/2026-04-28_223227_progress.md"
 }
