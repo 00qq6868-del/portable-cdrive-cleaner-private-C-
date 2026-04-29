@@ -84,6 +84,10 @@ public sealed class MainForm : Form
     private readonly Panel _filtersPanel = CreateSurfacePanel();
     private readonly Panel _summaryPanel = CreateSurfacePanel();
     private readonly Panel _contentPanel = CreateSurfacePanel();
+    private readonly Panel _loadingShieldPanel = new();
+    private readonly Label _loadingShieldTitleLabel = new();
+    private readonly Label _loadingShieldDetailLabel = new();
+    private readonly ThemedProgressBar _loadingShieldProgressBar = new();
     private readonly Panel _teachingPanel = new();
     private readonly ScrollFriendlyDataGridView _grid = new();
     private readonly ScrollFriendlyDataGridView _overviewGrid = new();
@@ -179,6 +183,7 @@ public sealed class MainForm : Form
     private bool _pendingOverviewIconColumnRefresh;
     private bool _pendingInfrequentIconColumnRefresh;
     private bool _scanStabilityMode;
+    private bool _scanVisualLockArmed;
     private Control? _activeContentControl;
     private ScanSnapshot? _deferredVisibleScanSnapshot;
     private LayoutDensityMode _layoutDensityMode;
@@ -265,6 +270,7 @@ public sealed class MainForm : Form
         UpdateDriveSummary();
         UpdateDriveTabs();
         UpdateScheduleStatus();
+        _scanVisualLockArmed = ShouldArmStartupScanVisualLock();
         UpdateGridPresentation();
         ApplyCurrentView();
         RefreshScaledUi(forceLayout: true);
@@ -398,6 +404,8 @@ public sealed class MainForm : Form
         _viewSummaryLabel.ForeColor = UiThemePalette.TextPrimary;
         _selectionSummaryLabel.ForeColor = UiThemePalette.AccentStrong;
         _selectionHintLabel.ForeColor = UiThemePalette.TextSecondary;
+        _loadingShieldTitleLabel.ForeColor = UiThemePalette.TextPrimary;
+        _loadingShieldDetailLabel.ForeColor = UiThemePalette.TextSecondary;
 
         UiThemePalette.ApplyLinkStyle(_scanWarningLink, warning: true);
         UiThemePalette.ApplyLinkStyle(_resultBannerLink);
@@ -608,6 +616,7 @@ public sealed class MainForm : Form
         layout.Controls.Add(_jobCenterLabel, 0, 0);
 
         _jobCenterSummaryLabel.AutoSize = true;
+        _jobCenterSummaryLabel.AutoEllipsis = true;
         _jobCenterSummaryLabel.ForeColor = Color.FromArgb(72, 84, 95);
         _jobCenterSummaryLabel.Margin = new Padding(0, 0, 0, 8);
         _jobCenterSummaryLabel.Visible = false;
@@ -1032,7 +1041,82 @@ public sealed class MainForm : Form
         ConfigureGrid();
         ConfigureOverviewGrid();
         ConfigureInfrequentGrid();
+        BuildLoadingShield();
         SetActiveContent(_grid);
+    }
+
+    private void BuildLoadingShield()
+    {
+        _loadingShieldPanel.Dock = DockStyle.Fill;
+        _loadingShieldPanel.Margin = Padding.Empty;
+        _loadingShieldPanel.Padding = new Padding(22, 20, 22, 20);
+        _loadingShieldPanel.BackColor = UiThemePalette.Surface;
+        _loadingShieldPanel.Visible = false;
+        UiThemePalette.EnableDoubleBuffering(_loadingShieldPanel);
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 3,
+            Margin = Padding.Empty,
+            BackColor = UiThemePalette.Surface
+        };
+        UiThemePalette.EnableDoubleBuffering(layout);
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        _loadingShieldPanel.Controls.Add(layout);
+
+        var card = new Panel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(18, 16, 18, 16),
+            Margin = Padding.Empty,
+            BackColor = UiThemePalette.SurfaceRaised
+        };
+        UiThemePalette.EnableDoubleBuffering(card);
+        UiThemePalette.AttachBorderPainter(card, UiThemePalette.BorderMuted);
+
+        var cardLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            RowCount = 3,
+            Margin = Padding.Empty,
+            BackColor = UiThemePalette.SurfaceRaised
+        };
+        cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        card.Controls.Add(cardLayout);
+
+        _loadingShieldTitleLabel.AutoSize = true;
+        _loadingShieldTitleLabel.Font = new Font("Microsoft YaHei UI", 10.5f, FontStyle.Bold);
+        _loadingShieldTitleLabel.Margin = new Padding(0, 0, 0, 6);
+        _loadingShieldTitleLabel.Text = "正在后台刷新";
+        cardLayout.Controls.Add(_loadingShieldTitleLabel, 0, 0);
+
+        _loadingShieldDetailLabel.AutoSize = false;
+        _loadingShieldDetailLabel.AutoEllipsis = true;
+        _loadingShieldDetailLabel.Dock = DockStyle.Top;
+        _loadingShieldDetailLabel.Height = 24;
+        _loadingShieldDetailLabel.Margin = new Padding(0, 0, 0, 12);
+        _loadingShieldDetailLabel.Text = "保持界面稳定，完成后显示最新候选。";
+        cardLayout.Controls.Add(_loadingShieldDetailLabel, 0, 1);
+
+        _loadingShieldProgressBar.Dock = DockStyle.Top;
+        _loadingShieldProgressBar.Height = 8;
+        _loadingShieldProgressBar.Margin = Padding.Empty;
+        cardLayout.Controls.Add(_loadingShieldProgressBar, 0, 2);
+
+        layout.Controls.Add(card, 0, 1);
     }
 
     private void BuildStatusRow()
@@ -4260,6 +4344,12 @@ public sealed class MainForm : Form
             && HasActiveScanJob();
     }
 
+    private bool ShouldArmStartupScanVisualLock()
+    {
+        return !_disableStartupRefresh
+            && _viewMode == MainViewMode.CleanupCandidates;
+    }
+
     private bool HasActiveScanJob()
     {
         if (_operationManager.HasActiveJob(OperationJobKind.Scan))
@@ -4283,6 +4373,9 @@ public sealed class MainForm : Form
             UpdateActionStates();
             return;
         }
+
+        _scanVisualLockArmed = _viewMode == MainViewMode.CleanupCandidates;
+        UpdateScanStabilityMode(forceRepaint: true);
 
         _operationManager.Enqueue(
             OperationJobKind.Scan,
@@ -4348,6 +4441,7 @@ public sealed class MainForm : Form
                 OnUiThread(() =>
                 {
                     _deferredVisibleScanSnapshot = null;
+                    _scanVisualLockArmed = false;
                     ReplaceSnapshot(snapshot);
                     RestoreDeferredStartupViewIfReady(snapshot);
                     _snapshotCacheService.Save(_settings, snapshot);
@@ -4373,6 +4467,7 @@ public sealed class MainForm : Form
                 OnUiThread(() =>
                 {
                     _deferredVisibleScanSnapshot = null;
+                    _scanVisualLockArmed = false;
                     UpdateScanStabilityMode(forceRepaint: true);
                     QueueVisualStabilizationAfterDataChange(forceLayout: true);
                     var fatalLogPath = WriteFatalScanFailureLog(ex);
@@ -4637,6 +4732,9 @@ public sealed class MainForm : Form
             var activeJob = state.Jobs.FirstOrDefault(job => job.State is OperationJobState.Running or OperationJobState.Queued)
                 ?? state.Jobs.FirstOrDefault();
             _jobCenterLabel.Visible = !IsUltraCompactLayout;
+            _jobCenterSummaryLabel.AutoSize = false;
+            _jobCenterSummaryLabel.Dock = DockStyle.Top;
+            _jobCenterSummaryLabel.Height = IsUltraCompactLayout ? 24 : 26;
             _jobCenterSummaryLabel.Text = activeJob is null
                 ? $"后台任务：运行 {state.RunningCount} / 排队 {state.QueuedCount}"
                 : BuildCompactJobSummary(activeJob);
@@ -4658,6 +4756,8 @@ public sealed class MainForm : Form
         if (collapseCompleted)
         {
             var latestJob = state.Jobs.FirstOrDefault();
+            _jobCenterSummaryLabel.AutoSize = true;
+            _jobCenterSummaryLabel.Dock = DockStyle.None;
             _jobCenterSummaryLabel.Margin = new Padding(0, 0, 0, 8);
             _jobCenterSummaryLabel.Text = latestJob is null
                 ? "最近后台任务已完成。"
@@ -4672,6 +4772,8 @@ public sealed class MainForm : Form
         }
 
         _jobCenterCompactProgressBar.Visible = false;
+        _jobCenterSummaryLabel.AutoSize = true;
+        _jobCenterSummaryLabel.Dock = DockStyle.None;
         _jobCenterSummaryLabel.Visible = false;
         _jobListFlow.Visible = true;
 
@@ -5112,14 +5214,18 @@ public sealed class MainForm : Form
 
     private void UpdateScanStabilityMode(bool forceRepaint = false)
     {
-        var nextMode = IsUltraCompactLayout && HasActiveScanJob();
+        var nextMode = IsUltraCompactLayout
+            && _viewMode == MainViewMode.CleanupCandidates
+            && (_scanVisualLockArmed || HasActiveScanJob());
         if (!forceRepaint && _scanStabilityMode == nextMode)
         {
+            UpdateLoadingShield();
             return;
         }
 
         _scanStabilityMode = nextMode;
         ApplyDataFirstVisibility();
+        UpdateLoadingShield();
 
         if (!forceRepaint || IsDisposed || !IsHandleCreated || _resizeDragInProgress)
         {
@@ -5519,9 +5625,9 @@ public sealed class MainForm : Form
     private void SetActiveContent(Control content)
     {
         if (_activeContentControl == content
-            && _contentPanel.Controls.Count == 1
-            && ReferenceEquals(_contentPanel.Controls[0], content))
+            && _contentPanel.Controls.Contains(content))
         {
+            UpdateLoadingShield();
             return;
         }
 
@@ -5533,21 +5639,76 @@ public sealed class MainForm : Form
                 _activeContentControl.Visible = false;
             }
 
-            while (_contentPanel.Controls.Count > 0)
+            foreach (Control existingControl in _contentPanel.Controls.Cast<Control>().ToList())
             {
-                _contentPanel.Controls.RemoveAt(0);
+                if (!ReferenceEquals(existingControl, _loadingShieldPanel))
+                {
+                    _contentPanel.Controls.Remove(existingControl);
+                }
             }
 
             content.Dock = DockStyle.Fill;
             content.Margin = Padding.Empty;
             content.Visible = true;
             _contentPanel.Controls.Add(content);
-            content.BringToFront();
             _activeContentControl = content;
+            EnsureLoadingShieldInContentPanel();
+            UpdateLoadingShield();
         }
         finally
         {
             _contentPanel.ResumeLayout(true);
+        }
+    }
+
+    private void EnsureLoadingShieldInContentPanel()
+    {
+        if (!_contentPanel.Controls.Contains(_loadingShieldPanel))
+        {
+            _contentPanel.Controls.Add(_loadingShieldPanel);
+        }
+    }
+
+    private void UpdateLoadingShield()
+    {
+        if (_loadingShieldPanel.IsDisposed)
+        {
+            return;
+        }
+
+        var show = _scanStabilityMode && _viewMode == MainViewMode.CleanupCandidates;
+        EnsureLoadingShieldInContentPanel();
+
+        var activeJob = _queueState.Jobs.FirstOrDefault(job => job.Kind == OperationJobKind.Scan
+            && job.State is OperationJobState.Running or OperationJobState.Queued);
+        _loadingShieldTitleLabel.Text = activeJob is null
+            ? "正在准备刷新"
+            : "正在后台刷新";
+        _loadingShieldDetailLabel.Text = activeJob is null
+            ? "界面保持稳定，候选列表稍后显示。"
+            : BuildCompactJobSummary(activeJob);
+        _loadingShieldProgressBar.Value = activeJob is null ? 0 : GetJobProgressBarValue(activeJob);
+        _loadingShieldProgressBar.IsIndeterminate = activeJob is not null
+            && activeJob.IsIndeterminate
+            && activeJob.Percent <= 0
+            && activeJob.State == OperationJobState.Running;
+
+        if (_activeContentControl is not null && !_activeContentControl.IsDisposed)
+        {
+            _activeContentControl.Visible = !show;
+        }
+
+        _loadingShieldPanel.Visible = show;
+        if (show)
+        {
+            _loadingShieldPanel.BringToFront();
+            return;
+        }
+
+        if (_activeContentControl is not null && !_activeContentControl.IsDisposed)
+        {
+            _activeContentControl.Visible = true;
+            _activeContentControl.BringToFront();
         }
     }
 
@@ -5788,6 +5949,7 @@ public sealed class MainForm : Form
                 InfrequentRows = _visibleInfrequentRows.Count,
                 ActiveGridRows = activeGrid?.Rows.Count ?? 0,
                 ActiveGridDisplayed = activeGrid?.Visible == true && activeGrid.IsHandleCreated,
+                LoadingShieldVisible = _loadingShieldPanel.Visible,
                 HeaderVisible = _headerPanel.Visible,
                 JobCenterVisible = _jobCenterPanel.Visible,
                 ViewModeVisible = _viewModePanel.Visible,
