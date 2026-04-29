@@ -46,6 +46,7 @@ public sealed class MainForm : Form
     private readonly MigrationService _migrationService;
     private readonly SnapshotCacheService _snapshotCacheService;
     private readonly OperationManager _operationManager;
+    private readonly OptimizationAuditService _optimizationAuditService;
     private readonly bool _readOnlyMode;
     private readonly bool _preserveStartupView;
     private readonly bool _persistWindowState;
@@ -120,6 +121,7 @@ public sealed class MainForm : Form
     private readonly ContextMenuStrip _moreActionsMenu = new();
     private readonly ToolStripMenuItem _openLocationMenuItem = new("在资源管理器中定位");
     private readonly ToolStripMenuItem _clearSelectionMenuItem = new("清空勾选");
+    private readonly ToolStripMenuItem _optimizationAuditMenuItem = new("安全体检 / 启动项");
     private readonly ToolStripMenuItem _regressionAuditMenuItem = new("问题结案清单");
     private readonly ToolStripMenuItem _openLogsMenuItem = new("日志目录");
     private readonly LinkLabel _retryBlockedLink = new();
@@ -127,6 +129,7 @@ public sealed class MainForm : Form
     private CDriveSuggestionDialog? _activeCDriveSuggestionDialog;
     private ScheduleSettingsDialog? _activeScheduleSettingsDialog;
     private RegressionAuditDialog? _activeRegressionAuditDialog;
+    private OptimizationAuditDialog? _activeOptimizationAuditDialog;
 
     private readonly DataGridViewCheckBoxColumn _selectColumn = new();
     private readonly DataGridViewCheckBoxColumn _overviewSelectColumn = new();
@@ -199,6 +202,7 @@ public sealed class MainForm : Form
         SchedulerService schedulerService,
         SnapshotCacheService snapshotCacheService,
         OperationManager operationManager,
+        OptimizationAuditService optimizationAuditService,
         AppSettings settings,
         ScanSnapshot? initialSnapshot = null,
         bool readOnlyMode = false,
@@ -219,6 +223,7 @@ public sealed class MainForm : Form
         _schedulerService = schedulerService;
         _snapshotCacheService = snapshotCacheService;
         _operationManager = operationManager;
+        _optimizationAuditService = optimizationAuditService;
         _settings = settings;
         _readOnlyMode = readOnlyMode;
         _preserveStartupView = preserveStartupView;
@@ -804,9 +809,10 @@ public sealed class MainForm : Form
 
             ApplyBulkSelection(_ => false);
         };
+        _optimizationAuditMenuItem.Click += (_, _) => OpenOptimizationAudit();
         _regressionAuditMenuItem.Click += (_, _) => OpenRegressionAudit();
         _openLogsMenuItem.Click += (_, _) => ShellHelper.OpenFolder(_context.LogsRoot);
-        _moreActionsMenu.Items.AddRange([_openLocationMenuItem, _clearSelectionMenuItem, new ToolStripSeparator(), _regressionAuditMenuItem, _openLogsMenuItem]);
+        _moreActionsMenu.Items.AddRange([_openLocationMenuItem, _clearSelectionMenuItem, new ToolStripSeparator(), _optimizationAuditMenuItem, _regressionAuditMenuItem, _openLogsMenuItem]);
     }
 
     private void BuildDriveTabsRow()
@@ -3532,6 +3538,28 @@ public sealed class MainForm : Form
             if (ReferenceEquals(_activeRegressionAuditDialog, dialog))
             {
                 _activeRegressionAuditDialog = null;
+            }
+        };
+        dialog.Show(this);
+    }
+
+    private void OpenOptimizationAudit()
+    {
+        if (_activeOptimizationAuditDialog is { IsDisposed: false })
+        {
+            _activeOptimizationAuditDialog.Activate();
+            _activeOptimizationAuditDialog.BringToFront();
+            return;
+        }
+
+        var snapshot = _optimizationAuditService.BuildSnapshot();
+        var dialog = new OptimizationAuditDialog(snapshot);
+        _activeOptimizationAuditDialog = dialog;
+        dialog.FormClosed += (_, _) =>
+        {
+            if (ReferenceEquals(_activeOptimizationAuditDialog, dialog))
+            {
+                _activeOptimizationAuditDialog = null;
             }
         };
         dialog.Show(this);

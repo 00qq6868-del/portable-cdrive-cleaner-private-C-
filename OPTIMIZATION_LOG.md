@@ -964,3 +964,50 @@
   - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
+
+## 2026-04-29 17:54:24
+- 模块：功能融合 / 安全体检 / 清理候选扩展 / QA
+- 任务：把 Windows 优化大师 7.0 风格中适合当前产品的功能安全融合进 WinForms 清理器
+- 检查点模式：Progress
+- 已完成：
+- 新增“更多 -> 安全体检 / 启动项”入口，展示传统启动项只读体检结果，不修改注册表、服务、计划任务或启动项文件。
+- 新增只读启动项模型与服务，覆盖 HKCU/HKLM Run、RunOnce、WOW6432Node Run/RunOnce、用户/公共 Startup 文件夹。
+- 新增 `OptimizationAuditDialog`，展示影响、建议、原因、来源、命令行、目标路径和安全处理方式，并可打开 Windows 启动应用设置。
+- 新增浏览器缓存、聊天缓存、隐私痕迹候选分类；新增浏览器 GPU/Code/Service Worker 缓存、Windows 最近记录/跳转列表、Explorer 图标/缩略图缓存候选。
+- 修复启动项启发式误判：注册表来源路径不再参与安全厂商 token 判断，避免所有 Run 项因 `Microsoft\Windows` 父路径被误判为安全。
+- 使用外部工具 Microsoft Sysinternals Autoruns 14.11 作为启动项扫描参照；不提交 Autoruns 原始输出。
+- 增强 QA 截图链，截图前恢复/聚焦窗口并重读稳定矩形，修复偶发 `158x26` 小截图误判。
+- 修改文件：
+- Forms/MainForm.cs
+- Forms/OptimizationAuditDialog.cs
+- Infrastructure/IconSemanticResolver.cs
+- Models/CleanupCandidateKind.cs
+- Models/CleanupSelectionRow.cs
+- Models/OptimizationAuditSnapshot.cs
+- Program.cs
+- Services/CDriveSuggestionService.cs
+- Services/OptimizationAuditService.cs
+- Services/ScanService.cs
+- tools/Run-Icon-Clarity-QA.ps1
+- AI_STATE.json
+- CURRENT_TASK.md
+- INTERRUPTED_PROGRESS.md
+- SOURCE_CHANGE_LEDGER.md
+- TODO_NOT_FIXED.md
+- OPTIMIZATION_LOG.md
+- 剩余项：
+- 用户最终主观视觉确认仍未完成，不能把 `PASS_PENDING_VISUAL` 写成最终视觉通过。
+- 安全体检目前只读覆盖传统启动项，计划任务/服务只读体检仍未接入。
+- 不提供一键禁用、服务优化、注册表清理、文件粉碎等高风险操作，除非后续先做备份/恢复/回滚和更严格 QA。
+- 商业第一水准的顶部 HUD、表格内饰、真实图标清晰度仍需继续深化。
+- 检查点文件：
+  - checkpoints/2026-04-29_175424_progress.md
+- 验证：
+- `dotnet build .\PortableCDriveCleaner.csproj`：0 warning / 0 error。
+- 运行时探针：`Startup=22 / High=5 / Review=5 / Safe=13`。
+- 窗口构造探针：`OptimizationAuditDialogConstructed=True Rows=22`。
+- 最终三轮安装版 QA：`artifacts/icon-qa/2026-04-29_174418/`，三轮自动硬门槛通过，启动约 `2.92s / 2.25s / 2.17s`，DPI `168`，无残留进程。
+- ImageMagick 加载静态区 AE 最大差异：三轮均为 `0`。
+- 风险 / 备注：
+- `artifacts/icon-qa/*` 是本地原始证据，公开仓库不提交。
+- 中间 QA 目录 `2026-04-29_173517` 有一轮失败，原因是 QA 截图工具偶发捕获小矩形，不是业务窗口崩溃；已修复工具并按规则重新跑完整三轮。

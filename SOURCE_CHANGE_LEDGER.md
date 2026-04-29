@@ -338,6 +338,43 @@
 
 ## 进行中 / 被打断
 
+### 2026-04-29 优化大师式安全功能融合
+- 范围：
+  - `Models/CleanupCandidateKind.cs`
+  - `Models/CleanupSelectionRow.cs`
+  - `Infrastructure/IconSemanticResolver.cs`
+  - `Models/OptimizationAuditSnapshot.cs`
+  - `Services/OptimizationAuditService.cs`
+  - `Forms/OptimizationAuditDialog.cs`
+  - `Forms/MainForm.cs`
+  - `Program.cs`
+  - `Services/ScanService.cs`
+  - `Services/CDriveSuggestionService.cs`
+  - `tools/Run-Icon-Clarity-QA.ps1`
+- 已做：
+  - 新增 `PrivacyTrace / BrowserCache / ChatCache` 三类候选，主列表显示为 `隐私痕迹 / 浏览器缓存 / 聊天缓存`。
+  - 新增只读 `OptimizationAuditService`，扫描传统启动项来源：HKCU/HKLM Run、RunOnce、WOW6432Node Run/RunOnce、用户/公共 Startup 文件夹。
+  - 新增 `OptimizationAuditDialog`，通过“更多 -> 安全体检 / 启动项”打开，展示类型、影响、建议、名称、来源、原因和详情；窗口明确写明只读，不修改启动项、注册表、服务或计划任务。
+  - 新增“打开启动应用设置”和“复制详情”辅助操作；处理建议引导用户去 Windows 设置或软件官方设置，不做一键禁用。
+  - 用 `ShellHelper.TryReadShortcut` 解析 Startup 文件夹 `.lnk` 目标，避免只看到快捷方式本身。
+  - 修复启动项启发式误判：不再把注册表父路径里的 `Microsoft\Windows` 纳入安全厂商判断，只使用名称、命令行和目标路径做风险/建议分析。
+  - 清理候选新增浏览器 profile 级 GPUCache、Code Cache、Service Worker CacheStorage；新增最近记录、跳转列表、Explorer 图标/缩略图缓存；微信旧版可重建缓存改归类为聊天缓存并明确不包含聊天数据库。
+  - `CDriveSuggestionService` 支持浏览器缓存、聊天缓存和隐私痕迹的建议文案。
+  - QA 脚本增强截图可靠性：截图前恢复/聚焦窗口并重读稳定窗口矩形，避免偶发捕获 `158x26` 小矩形导致误判。
+- 验证：
+  - `dotnet build .\PortableCDriveCleaner.csproj`：0 warning / 0 error。
+  - 已下载并安装外部工具 Microsoft Sysinternals Autoruns 14.11，用作启动项体检的官方参照工具；未提交任何 Autoruns 原始条目。
+  - 运行时探针：`OptimizationAuditService` 只读快照为 `Startup=22 / High=5 / Review=5 / Safe=13`。
+  - 窗口构造探针：`OptimizationAuditDialogConstructed=True Rows=22`。
+  - 修改后发布安装版并重跑完整三轮 QA；中间一轮 `2026-04-29_173517` 因截图工具偶发 `06-populated-small.png (158x26)` 失败，已修复 QA 截图链并重新完整三轮。
+  - 最终 QA 证据目录：`artifacts/icon-qa/2026-04-29_174418/`（本地原始截图，不提交公开仓库）。
+  - 最终三轮结果：启动约 `2.92s / 2.25s / 2.17s`，DPI `168`，无残留进程，自动硬门槛通过。
+  - 三轮加载静态区 ImageMagick AE 最大差异均为 `0`，按钮最大宽度比例 `1.38`，内容区比例约 `0.76`。
+- 状态：
+  - 功能融合按“安全、只读、可解释、可回退”完成第一阶段。
+  - 不能声明最终视觉满意：QA 仍为 `PASS_PENDING_VISUAL`，需要用户主观确认。
+  - 计划任务/服务只读体检、备份/恢复、一键禁用、注册表清理仍未接入，故意不做危险操作。
+
 ### 当前正在做
 - 任务：
   - 主窗口加载态和科技感继续往商业级质感收口

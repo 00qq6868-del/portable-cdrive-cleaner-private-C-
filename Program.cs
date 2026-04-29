@@ -24,6 +24,7 @@ internal static class Program
         var schedulerService = new SchedulerService(context);
         var deploymentService = new DeploymentService();
         var snapshotCacheService = new SnapshotCacheService(context);
+        var optimizationAuditService = new OptimizationAuditService();
         var settings = settingsService.Load();
         var operationManager = new OperationManager(settings.MaxConcurrentJobs);
         var initialSnapshot = snapshotCacheService.Load(settings);
@@ -156,6 +157,7 @@ internal static class Program
             schedulerService,
             snapshotCacheService,
             operationManager,
+            optimizationAuditService,
             settings,
             initialSnapshot,
             readOnlyMode,
@@ -424,6 +426,7 @@ internal static class Program
                     schedulerService,
                     new SnapshotCacheService(context),
                     new OperationManager(settings.MaxConcurrentJobs),
+                    new OptimizationAuditService(),
                     settings,
                     snapshot,
                     runtimeInfoText: launchDiagnostics.DisplayText,

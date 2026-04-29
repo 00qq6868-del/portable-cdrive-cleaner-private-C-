@@ -789,23 +789,129 @@ public sealed class ScanService
             CreateDirectoryItem("应用缓存", "腾讯视频图片缓存", "腾讯视频封面缓存", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "QQLive", "Image"), CleanupTargetKind.DirectoryContents, "只影响封面和缩略图重载。", "会清掉封面和缩略图缓存，界面图片会在下次打开时重新加载。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:QQLiveImage", candidateKind: CleanupCandidateKind.AppCache),
             CreateDirectoryItem("应用缓存", "腾讯视频网页缓存", "内置浏览器缓存", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "QQLive", "webkit_cache"), CleanupTargetKind.DirectoryContents, "只影响界面资源重新加载。", "会清掉内置网页缓存，之后内嵌页面会重新缓存。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:QQLiveWebCache", candidateKind: CleanupCandidateKind.AppCache),
             CreateDirectoryItem("应用缓存", "腾讯视频日志", "腾讯视频运行日志", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "QQLive", "Log"), CleanupTargetKind.DirectoryContents, "排查问题时才有价值。", "会删除腾讯视频历史日志，不影响继续使用，但会丢失排障记录。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:QQLiveLog", candidateKind: CleanupCandidateKind.AppCache),
-            CreateDirectoryItem("应用缓存", "微信旧版更新包", "微信升级缓存", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "xwechat", "update"), CleanupTargetKind.DirectoryContents, "更新完成后留下的安装缓存。", "会删除微信升级缓存，之后若要再次使用这份安装包可能需要重新下载。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:XwechatUpdate", candidateKind: CleanupCandidateKind.AppCache),
-            CreateDirectoryItem("应用缓存", "微信旧版日志", "微信运行日志", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "xwechat", "log"), CleanupTargetKind.DirectoryContents, "排查问题时才有参考价值。", "会清掉微信历史日志，不影响聊天数据，但会失去排障记录。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:XwechatLog", candidateKind: CleanupCandidateKind.AppCache),
-            CreateDirectoryItem("应用缓存", "微信旧版插件缓存", "微信插件和扩展缓存", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "xwechat", "xplugin"), CleanupTargetKind.DirectoryContents, "删除后可能会在下次打开时重新下载插件。", "会删除插件缓存，下次用到相关功能时可能重新下载或重新初始化。", CleanupImpactSeverity.Medium, false, false, ruleSource: "Known:XwechatPlugin", candidateKind: CleanupCandidateKind.AppCache),
-            CreateDirectoryItem("应用缓存", "微信旧版组件缓存", "微信组件缓存", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "xwechat", "radium"), CleanupTargetKind.DirectoryContents, "通常可再生，但默认不自动勾选。", "会清掉组件缓存，微信下次启动时可能重新生成相关组件。", CleanupImpactSeverity.Medium, false, false, ruleSource: "Known:XwechatComponent", candidateKind: CleanupCandidateKind.AppCache),
+            CreateDirectoryItem("聊天缓存", "微信旧版更新包", "微信升级缓存", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "xwechat", "update"), CleanupTargetKind.DirectoryContents, "更新完成后留下的安装缓存，不包含聊天数据库。", "会删除微信升级缓存，之后若要再次使用这份安装包可能需要重新下载。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:XwechatUpdate", candidateKind: CleanupCandidateKind.ChatCache),
+            CreateDirectoryItem("聊天缓存", "微信旧版日志", "微信运行日志", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "xwechat", "log"), CleanupTargetKind.DirectoryContents, "排查问题时才有参考价值，不包含聊天数据库。", "会清掉微信历史日志，不影响聊天数据，但会失去排障记录。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:XwechatLog", candidateKind: CleanupCandidateKind.ChatCache),
+            CreateDirectoryItem("聊天缓存", "微信旧版插件缓存", "微信插件和扩展缓存", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "xwechat", "xplugin"), CleanupTargetKind.DirectoryContents, "删除后可能会在下次打开时重新下载插件，不包含聊天数据库。", "会删除插件缓存，下次用到相关功能时可能重新下载或重新初始化。", CleanupImpactSeverity.Medium, false, false, ruleSource: "Known:XwechatPlugin", candidateKind: CleanupCandidateKind.ChatCache),
+            CreateDirectoryItem("聊天缓存", "微信旧版组件缓存", "微信组件缓存", Path.Combine(currentUser, "AppData", "Roaming", "Tencent", "xwechat", "radium"), CleanupTargetKind.DirectoryContents, "通常可再生，但默认不自动勾选；不包含聊天数据库。", "会清掉组件缓存，微信下次启动时可能重新生成相关组件。", CleanupImpactSeverity.Medium, false, false, ruleSource: "Known:XwechatComponent", candidateKind: CleanupCandidateKind.ChatCache),
             CreateDirectoryItem("应用缓存", "VS Code 缓存", "VS Code 资源缓存", Path.Combine(currentUser, "AppData", "Roaming", "Code", "Cache"), CleanupTargetKind.DirectoryContents, "删除后只会让 VS Code 重新生成缓存，不影响扩展和设置。", "会清掉编辑器资源缓存，VS Code 下次启动时会重新生成。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:CodeCache", candidateKind: CleanupCandidateKind.AppCache),
             CreateDirectoryItem("应用缓存", "VS Code 已编译缓存", "VS Code CachedData", Path.Combine(currentUser, "AppData", "Roaming", "Code", "CachedData"), CleanupTargetKind.DirectoryContents, "属于编辑器加速缓存，删除后会重新构建。", "会让 VS Code 的加速缓存失效，首次再次打开时可能稍慢。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:CodeCachedData", candidateKind: CleanupCandidateKind.AppCache),
             CreateDirectoryItem("应用缓存", "VS Code Service Worker 缓存", "VS Code 网页缓存", Path.Combine(currentUser, "AppData", "Roaming", "Code", "Service Worker", "CacheStorage"), CleanupTargetKind.DirectoryContents, "只影响内嵌网页和扩展面板缓存。", "会删除内嵌网页缓存，扩展面板内容将重新加载。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:CodeServiceWorker", candidateKind: CleanupCandidateKind.AppCache),
             CreateDirectoryItem("应用缓存", "Cursor 缓存", "Cursor 资源缓存", Path.Combine(currentUser, "AppData", "Roaming", "Cursor", "Cache"), CleanupTargetKind.DirectoryContents, "删除后只会让 Cursor 重新生成缓存。", "会清掉 Cursor 资源缓存，之后应用会重新生成。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:CursorCache", candidateKind: CleanupCandidateKind.AppCache),
             CreateDirectoryItem("应用缓存", "Cursor 已编译缓存", "Cursor CachedData", Path.Combine(currentUser, "AppData", "Roaming", "Cursor", "CachedData"), CleanupTargetKind.DirectoryContents, "属于编辑器加速缓存，删除后会重新构建。", "会让 Cursor 的加速缓存失效，首次再次打开时可能稍慢。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:CursorCachedData", candidateKind: CleanupCandidateKind.AppCache),
             CreateDirectoryItem("应用缓存", "Cursor Service Worker 缓存", "Cursor 网页缓存", Path.Combine(currentUser, "AppData", "Roaming", "Cursor", "Service Worker", "CacheStorage"), CleanupTargetKind.DirectoryContents, "只影响应用内网页缓存。", "会删除应用内网页缓存，相关页面会重新加载。", CleanupImpactSeverity.Medium, false, true, ruleSource: "Known:CursorServiceWorker", candidateKind: CleanupCandidateKind.AppCache),
-            CreateDirectoryItem("应用缓存", "Edge 浏览器缓存", "网页图片、脚本、视频缓存", Path.Combine(currentUser, "AppData", "Local", "Microsoft", "Edge", "User Data", "Default", "Cache", "Cache_Data"), CleanupTargetKind.DirectoryContents, "不会删除书签和密码，只会让页面重新缓存。", "会清掉网页缓存，页面图片和脚本需要重新缓存，但不会影响书签和密码。", CleanupImpactSeverity.Low, false, true, ruleSource: "Known:EdgeCache", candidateKind: CleanupCandidateKind.AppCache),
-            CreateDirectoryItem("应用缓存", "Chrome 浏览器缓存", "网页图片、脚本、视频缓存", Path.Combine(currentUser, "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Cache", "Cache_Data"), CleanupTargetKind.DirectoryContents, "不会删除账号和收藏，只影响缓存重建。", "会清掉网页缓存，页面资源会重新缓存，但不会影响账号和收藏。", CleanupImpactSeverity.Low, false, true, ruleSource: "Known:ChromeCache", candidateKind: CleanupCandidateKind.AppCache)
+            CreateDirectoryItem("浏览器缓存", "Edge 浏览器缓存", "网页图片、脚本、视频缓存", Path.Combine(currentUser, "AppData", "Local", "Microsoft", "Edge", "User Data", "Default", "Cache", "Cache_Data"), CleanupTargetKind.DirectoryContents, "不会删除书签和密码，只会让页面重新缓存。", "会清掉网页缓存，页面图片和脚本需要重新缓存，但不会影响书签和密码。", CleanupImpactSeverity.Low, false, true, ruleSource: "Known:EdgeCache", candidateKind: CleanupCandidateKind.BrowserCache),
+            CreateDirectoryItem("浏览器缓存", "Chrome 浏览器缓存", "网页图片、脚本、视频缓存", Path.Combine(currentUser, "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Cache", "Cache_Data"), CleanupTargetKind.DirectoryContents, "不会删除账号和收藏，只影响缓存重建。", "会清掉网页缓存，页面资源会重新缓存，但不会影响账号和收藏。", CleanupImpactSeverity.Low, false, true, ruleSource: "Known:ChromeCache", candidateKind: CleanupCandidateKind.BrowserCache)
         };
 
         foreach (var item in reviewItems)
         {
             AddItem(items, item);
+        }
+
+        AddBrowserProfileCacheItems(items, currentUser);
+        AddWindowsPrivacyTraceItems(items, currentUser);
+        AddExplorerVisualCacheItems(items, currentUser);
+    }
+
+    private void AddBrowserProfileCacheItems(IDictionary<string, CleanupItem> items, string currentUser)
+    {
+        var browserRoots = new[]
+        {
+            ("Edge", Path.Combine(currentUser, "AppData", "Local", "Microsoft", "Edge", "User Data")),
+            ("Chrome", Path.Combine(currentUser, "AppData", "Local", "Google", "Chrome", "User Data"))
+        };
+
+        foreach (var (browserName, userDataRoot) in browserRoots)
+        {
+            foreach (var profilePath in EnumerateBrowserProfiles(userDataRoot))
+            {
+                var profileName = Path.GetFileName(profilePath);
+                AddItem(items, CreateDirectoryItem("浏览器缓存", $"{browserName} {profileName} GPU 缓存", "浏览器 GPU/合成缓存", Path.Combine(profilePath, "GPUCache"), CleanupTargetKind.DirectoryContents, "只清理浏览器可重建的图形缓存，不删除书签、密码、历史记录。", "会让浏览器重新生成 GPU 缓存；首次打开某些网页可能稍慢。", CleanupImpactSeverity.Low, false, true, ruleSource: $"Known:{browserName}GpuCache", candidateKind: CleanupCandidateKind.BrowserCache));
+                AddItem(items, CreateDirectoryItem("浏览器缓存", $"{browserName} {profileName} 代码缓存", "网页脚本编译缓存", Path.Combine(profilePath, "Code Cache"), CleanupTargetKind.DirectoryContents, "只清理可重建的脚本编译缓存，不删除账号和收藏。", "网页脚本缓存会重建，少数页面首次加载可能稍慢。", CleanupImpactSeverity.Low, false, true, ruleSource: $"Known:{browserName}CodeCache", candidateKind: CleanupCandidateKind.BrowserCache));
+                AddItem(items, CreateDirectoryItem("浏览器缓存", $"{browserName} {profileName} Service Worker 缓存", "网页离线资源缓存", Path.Combine(profilePath, "Service Worker", "CacheStorage"), CleanupTargetKind.DirectoryContents, "清理网页离线资源缓存，不删除浏览器账号、收藏或密码。", "部分网页离线内容和缓存资源会重新下载。", CleanupImpactSeverity.Medium, false, true, ruleSource: $"Known:{browserName}ServiceWorkerCache", candidateKind: CleanupCandidateKind.BrowserCache));
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateBrowserProfiles(string userDataRoot)
+    {
+        if (string.IsNullOrWhiteSpace(userDataRoot) || !Directory.Exists(userDataRoot))
+        {
+            return [];
+        }
+
+        try
+        {
+            return Directory.EnumerateDirectories(userDataRoot, "*", SearchOption.TopDirectoryOnly)
+                .Where(path =>
+                {
+                    var name = Path.GetFileName(path);
+                    return name.Equals("Default", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("Guest Profile", StringComparison.OrdinalIgnoreCase)
+                        || name.StartsWith("Profile ", StringComparison.OrdinalIgnoreCase);
+                })
+                .Take(16)
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private void AddWindowsPrivacyTraceItems(IDictionary<string, CleanupItem> items, string currentUser)
+    {
+        var recentRoot = Path.Combine(currentUser, "AppData", "Roaming", "Microsoft", "Windows", "Recent");
+        AddItem(items, CreateDirectoryItem("隐私痕迹", "最近打开记录", "Windows 最近文档快捷记录", recentRoot, CleanupTargetKind.DirectoryContents, "这只清理最近打开记录，不删除原始文档。", "会清空资源管理器和部分应用显示的最近项目记录；原文件不会被删除。", CleanupImpactSeverity.Medium, false, false, ruleSource: "Known:RecentItems", candidateKind: CleanupCandidateKind.PrivacyTrace));
+        AddItem(items, CreateDirectoryItem("隐私痕迹", "跳转列表记录", "Windows 任务栏跳转列表", Path.Combine(recentRoot, "AutomaticDestinations"), CleanupTargetKind.DirectoryContents, "这只清理任务栏/开始菜单的跳转列表记录，不删除原始文件。", "会重置部分应用右键菜单中的最近文件列表。", CleanupImpactSeverity.Medium, false, false, ruleSource: "Known:AutomaticDestinations", candidateKind: CleanupCandidateKind.PrivacyTrace));
+        AddItem(items, CreateDirectoryItem("隐私痕迹", "自定义跳转列表记录", "Windows 自定义跳转列表", Path.Combine(recentRoot, "CustomDestinations"), CleanupTargetKind.DirectoryContents, "这只清理应用自定义跳转列表记录，不删除原始文件。", "会重置部分应用的固定/最近跳转列表，建议确认后再处理。", CleanupImpactSeverity.Medium, false, false, ruleSource: "Known:CustomDestinations", candidateKind: CleanupCandidateKind.PrivacyTrace));
+    }
+
+    private void AddExplorerVisualCacheItems(IDictionary<string, CleanupItem> items, string currentUser)
+    {
+        var explorerRoot = Path.Combine(currentUser, "AppData", "Local", "Microsoft", "Windows", "Explorer");
+        if (!Directory.Exists(explorerRoot))
+        {
+            return;
+        }
+
+        foreach (var file in EnumerateVisualCacheFiles(explorerRoot))
+        {
+            var fileName = Path.GetFileName(file);
+            var isIconCache = fileName.StartsWith("iconcache_", StringComparison.OrdinalIgnoreCase);
+            AddItem(items, CreateFileItem(
+                "系统缓存",
+                isIconCache ? $"资源管理器图标缓存 {fileName}" : $"资源管理器缩略图缓存 {fileName}",
+                isIconCache ? "Windows 图标缓存文件" : "Windows 缩略图缓存文件",
+                file,
+                CleanupTargetKind.FilePermanent,
+                "这是 Windows 可重建的视觉缓存；文件可能被系统占用，清理失败时会自动跳过。",
+                isIconCache ? "会让 Windows 重新生成图标缓存，可用于修复旧图标残留，但短时间内资源管理器可能重新加载图标。" : "会让 Windows 重新生成缩略图缓存，首次打开图片/视频目录时可能稍慢。",
+                CleanupImpactSeverity.Low,
+                false,
+                true,
+                ruleSource: isIconCache ? "Known:ExplorerIconCache" : "Known:ExplorerThumbCache",
+                candidateKind: CleanupCandidateKind.SafeJunk));
+        }
+    }
+
+    private static IEnumerable<string> EnumerateVisualCacheFiles(string explorerRoot)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(explorerRoot, "*cache_*.db", SearchOption.TopDirectoryOnly)
+                .Where(path =>
+                {
+                    var name = Path.GetFileName(path);
+                    return name.StartsWith("thumbcache_", StringComparison.OrdinalIgnoreCase)
+                        || name.StartsWith("iconcache_", StringComparison.OrdinalIgnoreCase);
+                })
+                .Take(64)
+                .ToList();
+        }
+        catch
+        {
+            return [];
         }
     }
 

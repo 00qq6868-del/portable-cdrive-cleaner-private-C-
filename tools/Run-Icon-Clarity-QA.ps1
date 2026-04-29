@@ -194,16 +194,43 @@ function Exercise-ResizePath {
     }
 }
 
+function Get-StableWindowRect {
+    param([IntPtr]$Handle)
+
+    for ($attempt = 0; $attempt -lt 4; $attempt++) {
+        [void][Win32Qa]::ShowWindow($Handle, [Win32Qa]::SW_RESTORE)
+        [void][Win32Qa]::SetForegroundWindow($Handle)
+        Start-Sleep -Milliseconds 250
+
+        $rect = New-Object Win32Qa+RECT
+        if ([Win32Qa]::GetWindowRect($Handle, [ref]$rect)) {
+            $width = $rect.Right - $rect.Left
+            $height = $rect.Bottom - $rect.Top
+            if ($width -ge 760 -and $height -ge 520) {
+                return $rect
+            }
+        }
+
+        Start-Sleep -Milliseconds 250
+    }
+
+    [void][Win32Qa]::MoveWindow($Handle, 20, 20, 1220, 760, $true)
+    Start-Sleep -Milliseconds 1000
+    $fallbackRect = New-Object Win32Qa+RECT
+    if (-not [Win32Qa]::GetWindowRect($Handle, [ref]$fallbackRect)) {
+        throw "Failed to read window bounds."
+    }
+
+    return $fallbackRect
+}
+
 function Save-WindowScreenshot {
     param(
         [IntPtr]$Handle,
         [string]$OutputPath
     )
 
-    $rect = New-Object Win32Qa+RECT
-    if (-not [Win32Qa]::GetWindowRect($Handle, [ref]$rect)) {
-        throw "Failed to read window bounds."
-    }
+    $rect = Get-StableWindowRect -Handle $Handle
 
     $width = [Math]::Max(1, $rect.Right - $rect.Left)
     $height = [Math]::Max(1, $rect.Bottom - $rect.Top)

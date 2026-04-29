@@ -62,6 +62,33 @@ public sealed class CDriveSuggestionService
                     ActionText = "可直接清；常用软件建议把缓存/下载位置改到 D / E",
                     ReasonText = "缓存删掉后一般会自动重建，不需要重新安装软件本体。"
                 },
+                CleanupCandidateKind.BrowserCache => new CDriveSuggestion
+                {
+                    SourceType = "浏览器缓存",
+                    Name = item.Name,
+                    SizeBytes = item.SizeBytes,
+                    CurrentPath = item.Path,
+                    ActionText = "可清理；如果缓存很大，也建议把下载目录改到 D / E",
+                    ReasonText = "浏览器网页缓存、GPU 缓存和脚本缓存通常可重建，不会删除书签和密码。"
+                },
+                CleanupCandidateKind.ChatCache => new CDriveSuggestion
+                {
+                    SourceType = "聊天缓存",
+                    Name = item.Name,
+                    SizeBytes = item.SizeBytes,
+                    CurrentPath = item.Path,
+                    ActionText = "只清缓存/日志；确认不含聊天数据库后再处理",
+                    ReasonText = "聊天软件缓存可能占用较大，但必须和聊天记录数据库严格分开。"
+                },
+                CleanupCandidateKind.PrivacyTrace => new CDriveSuggestion
+                {
+                    SourceType = "隐私痕迹",
+                    Name = item.Name,
+                    SizeBytes = item.SizeBytes,
+                    CurrentPath = item.Path,
+                    ActionText = "按隐私需求处理；不会释放大量空间",
+                    ReasonText = "最近项目和跳转列表主要影响隐私记录，不是纯空间优化项。"
+                },
                 CleanupCandidateKind.AppResidue => new CDriveSuggestion
                 {
                     SourceType = "应用残留",

@@ -92,6 +92,9 @@ public static class IconSemanticResolver
         return item.CandidateKind switch
         {
             CleanupCandidateKind.AppCache => ClassifyFromText(item.Name, item.Category, item.RuleSource, row.Path, preferCache: true),
+            CleanupCandidateKind.BrowserCache => IconSemanticKind.Cache,
+            CleanupCandidateKind.ChatCache => IconSemanticKind.Cache,
+            CleanupCandidateKind.PrivacyTrace => IconSemanticKind.Document,
             CleanupCandidateKind.Package => IconSemanticKind.Package,
             CleanupCandidateKind.DuplicateFile => IconSemanticKind.Duplicate,
             CleanupCandidateKind.LargeDirectory => IsTrueUserDataDirectory(row.Path, item.Name)
