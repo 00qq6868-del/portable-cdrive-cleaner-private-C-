@@ -314,6 +314,28 @@
 - 状态：
   - 加载期抖动从“表格继续参与重绘”改为“前台遮罩稳定展示”；后续如果仍感觉动，重点应只剩顶部进度文字/进度条节奏和扫描耗时体验。
 
+### 2026-04-29 加载期真实数据优先与 ImageMagick 静态差异硬门槛
+- 范围：
+  - `Forms/MainForm.cs`
+  - `tools/Run-Icon-Clarity-QA.ps1`
+- 已做：
+  - 撤掉上一轮“全屏遮罩长期盖住内容”的策略：`CleanupCandidates` 在 UltraCompact 加载期只有 `_allRows.Count == 0` 时才进入全屏稳定遮罩；首批 C 盘候选出现后立即显示真实表格，后续扫描快照继续延后合并，避免用户看到空黑页。
+  - 删除破损的 `DrawToBitmap` 背景/截图遮罩链路，避免 WinForms 高 DPI 下把旧控件碎片、裁切按钮或脏像素复制到加载层。
+  - 将加载遮罩改为无子控件、无透明 `TableLayoutPanel` 的 owner-painted `LoadingShieldPanel`；极早期无数据时只手绘静态骨架表格和底部进度卡，避免真实表格参与前台重绘。
+  - 顶部按钮/盘符选择字体轻微放大，保持“比文字略宽”的按钮测量规则，不再回到大块等宽按钮。
+  - QA 脚本接入外部工具 ImageMagick：每轮加载前 10 秒截图后，裁剪稳定内容区并比较连续截图 AE 像素差；静态区域变化超过阈值直接 FAIL。
+  - 修正 QA 截图健康检查：从文件大小改为真实 PNG 尺寸读取，避免纯黑/低复杂度截图被误判或错误放行。
+- 验证：
+  - 已使用外部工具：`ImageMagick 7.1.2 Q16-HDRI`，路径只保存在本地 QA environment，公开仓库仅记录工具名称。
+  - `dotnet build .\PortableCDriveCleaner.csproj`：0 warning / 0 error。
+  - 修改后按规则重新发布安装版并跑完整三轮 QA，最终证据目录：`artifacts/icon-qa/2026-04-29_102322/`（本地原始截图，不提交公开仓库）。
+  - 三轮结果：启动约 `2.42s / 2.14s / 2.56s`，DPI `168`，无残留进程，自动硬门槛 0 failures。
+  - 三轮加载静态区 ImageMagick AE 最大差异：`0 / 0 / 0`，连续截图稳定区域无像素变化。
+  - QA 状态：`LoadingShieldVisible=false`、`ActiveVisibleRows=31`、`SnapshotCleanupRows=123`、`ContentHeightRatio=0.76`、`MaxViewButtonExcess=18`、`MaxActionButtonExcess=18`、`MaxViewButtonRatio=1.33`。
+  - 人工自查 `00-loading-04.png` 与 `06-populated-small.png`：加载时真实候选表格可见，未见重复行、空黑遮罩、旧控件碎片、白条或明显跳动。
+- 状态：
+  - 这次只能标记为“自动硬门槛通过 + 人工自查通过 + 等用户最终确认”，不能替代用户主观满意验收；但“加载时一直空黑和抖动”的具体复现路径已用三轮安装版和 ImageMagick 静态差异收口。
+
 ## 进行中 / 被打断
 
 ### 当前正在做
@@ -322,7 +344,8 @@
 - 当前进度：
   - GitHub 持久记忆基座已完成
   - 已完成 `ApplicationIconCache` 提取链和表格图标显示链的第二轮真实修改
-  - 已完成 4 组三轮自动化 QA，最近一组证据目录为 `artifacts/icon-qa/2026-04-29_075203`
+  - 已完成多组三轮自动化 QA，最近一组正式证据目录为 `artifacts/icon-qa/2026-04-29_102322`
+  - 已安装并使用本地图像验收工具 `ImageMagick`，加载静态区 AE 差异三轮均为 `0`
   - 已安装本地帧时间辅助工具 `PresentMon Console`，可继续量化拖动和加载时的帧时间尖峰
 - 当前未完成：
   - 内部列表图标是否已达到桌面快捷方式级清晰度，仍需人眼验收
@@ -331,9 +354,8 @@
   - 主窗口内部黑底科技感还不够“商业第一”，仍需继续重做顶部 HUD、表格内饰和图标风格
   - 全量后台刷新耗时可能超过当前 QA 等待窗口，后续应把“长扫描期间的后台化体验”和“扫描完成后最终表格回来”单独做长时验收
 - 下一步精确落点：
-  - 先把这轮真实修改和三轮 QA 结果写回 checkpoint 并推送
-  - 再把主窗口顶部从“系统工具条”继续提炼成更强的 HUD 控制条
-  - 然后继续补强图标清晰度和视觉验收路径
+  - 先把这轮真实修改、三轮 QA 结果和 ImageMagick 验证写回 checkpoint 并推送
+  - 再按用户反馈继续处理图标清晰度、顶部 HUD 质感和商业级视觉
 
 ## 尚未开始的源码方案
 - 退出后进程残留的专项收口

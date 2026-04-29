@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Drawing.Drawing2D;
 using System.Text.Json;
 using PortableCDriveCleaner.Infrastructure;
 using PortableCDriveCleaner.Models;
@@ -84,10 +85,7 @@ public sealed class MainForm : Form
     private readonly Panel _filtersPanel = CreateSurfacePanel();
     private readonly Panel _summaryPanel = CreateSurfacePanel();
     private readonly Panel _contentPanel = CreateSurfacePanel();
-    private readonly Panel _loadingShieldPanel = new();
-    private readonly Label _loadingShieldTitleLabel = new();
-    private readonly Label _loadingShieldDetailLabel = new();
-    private readonly ThemedProgressBar _loadingShieldProgressBar = new();
+    private readonly LoadingShieldPanel _loadingShieldPanel = new();
     private readonly Panel _teachingPanel = new();
     private readonly ScrollFriendlyDataGridView _grid = new();
     private readonly ScrollFriendlyDataGridView _overviewGrid = new();
@@ -270,7 +268,6 @@ public sealed class MainForm : Form
         UpdateDriveSummary();
         UpdateDriveTabs();
         UpdateScheduleStatus();
-        _scanVisualLockArmed = ShouldArmStartupScanVisualLock();
         UpdateGridPresentation();
         ApplyCurrentView();
         RefreshScaledUi(forceLayout: true);
@@ -371,6 +368,7 @@ public sealed class MainForm : Form
         BuildFiltersRow();
         BuildSummaryRow();
         BuildContentRow();
+        BuildLoadingShield();
         BuildStatusRow();
     }
 
@@ -404,8 +402,6 @@ public sealed class MainForm : Form
         _viewSummaryLabel.ForeColor = UiThemePalette.TextPrimary;
         _selectionSummaryLabel.ForeColor = UiThemePalette.AccentStrong;
         _selectionHintLabel.ForeColor = UiThemePalette.TextSecondary;
-        _loadingShieldTitleLabel.ForeColor = UiThemePalette.TextPrimary;
-        _loadingShieldDetailLabel.ForeColor = UiThemePalette.TextSecondary;
 
         UiThemePalette.ApplyLinkStyle(_scanWarningLink, warning: true);
         UiThemePalette.ApplyLinkStyle(_resultBannerLink);
@@ -1041,7 +1037,6 @@ public sealed class MainForm : Form
         ConfigureGrid();
         ConfigureOverviewGrid();
         ConfigureInfrequentGrid();
-        BuildLoadingShield();
         SetActiveContent(_grid);
     }
 
@@ -1049,74 +1044,11 @@ public sealed class MainForm : Form
     {
         _loadingShieldPanel.Dock = DockStyle.Fill;
         _loadingShieldPanel.Margin = Padding.Empty;
-        _loadingShieldPanel.Padding = new Padding(22, 20, 22, 20);
+        _loadingShieldPanel.Padding = new Padding(22, 20, 22, 22);
         _loadingShieldPanel.BackColor = UiThemePalette.Surface;
         _loadingShieldPanel.Visible = false;
-        UiThemePalette.EnableDoubleBuffering(_loadingShieldPanel);
-
-        var layout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 3,
-            Margin = Padding.Empty,
-            BackColor = UiThemePalette.Surface
-        };
-        UiThemePalette.EnableDoubleBuffering(layout);
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-        _loadingShieldPanel.Controls.Add(layout);
-
-        var card = new Panel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(18, 16, 18, 16),
-            Margin = Padding.Empty,
-            BackColor = UiThemePalette.SurfaceRaised
-        };
-        UiThemePalette.EnableDoubleBuffering(card);
-        UiThemePalette.AttachBorderPainter(card, UiThemePalette.BorderMuted);
-
-        var cardLayout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 1,
-            RowCount = 3,
-            Margin = Padding.Empty,
-            BackColor = UiThemePalette.SurfaceRaised
-        };
-        cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        card.Controls.Add(cardLayout);
-
-        _loadingShieldTitleLabel.AutoSize = true;
-        _loadingShieldTitleLabel.Font = new Font("Microsoft YaHei UI", 10.5f, FontStyle.Bold);
-        _loadingShieldTitleLabel.Margin = new Padding(0, 0, 0, 6);
-        _loadingShieldTitleLabel.Text = "正在后台刷新";
-        cardLayout.Controls.Add(_loadingShieldTitleLabel, 0, 0);
-
-        _loadingShieldDetailLabel.AutoSize = false;
-        _loadingShieldDetailLabel.AutoEllipsis = true;
-        _loadingShieldDetailLabel.Dock = DockStyle.Top;
-        _loadingShieldDetailLabel.Height = 24;
-        _loadingShieldDetailLabel.Margin = new Padding(0, 0, 0, 12);
-        _loadingShieldDetailLabel.Text = "保持界面稳定，完成后显示最新候选。";
-        cardLayout.Controls.Add(_loadingShieldDetailLabel, 0, 1);
-
-        _loadingShieldProgressBar.Dock = DockStyle.Top;
-        _loadingShieldProgressBar.Height = 8;
-        _loadingShieldProgressBar.Margin = Padding.Empty;
-        cardLayout.Controls.Add(_loadingShieldProgressBar, 0, 2);
-
-        layout.Controls.Add(card, 0, 1);
+        Controls.Add(_loadingShieldPanel);
+        _loadingShieldPanel.BringToFront();
     }
 
     private void BuildStatusRow()
@@ -4344,12 +4276,6 @@ public sealed class MainForm : Form
             && HasActiveScanJob();
     }
 
-    private bool ShouldArmStartupScanVisualLock()
-    {
-        return !_disableStartupRefresh
-            && _viewMode == MainViewMode.CleanupCandidates;
-    }
-
     private bool HasActiveScanJob()
     {
         if (_operationManager.HasActiveJob(OperationJobKind.Scan))
@@ -5216,7 +5142,8 @@ public sealed class MainForm : Form
     {
         var nextMode = IsUltraCompactLayout
             && _viewMode == MainViewMode.CleanupCandidates
-            && (_scanVisualLockArmed || HasActiveScanJob());
+            && (_scanVisualLockArmed || HasActiveScanJob())
+            && _allRows.Count == 0;
         if (!forceRepaint && _scanStabilityMode == nextMode)
         {
             UpdateLoadingShield();
@@ -5264,10 +5191,10 @@ public sealed class MainForm : Form
     private static void ApplyButtonFont(Button button, bool compactLayout, bool ultraCompactLayout, FontStyle? styleOverride = null, bool compactQuickFilter = false)
     {
         var fontSize = ultraCompactLayout
-            ? (compactQuickFilter ? 8.0f : 8.35f)
+            ? (compactQuickFilter ? 8.35f : 9.0f)
             : compactLayout
-                ? (compactQuickFilter ? 8.3f : 8.7f)
-                : (compactQuickFilter ? 8.5f : 9f);
+                ? (compactQuickFilter ? 8.65f : 9.15f)
+                : (compactQuickFilter ? 8.85f : 9.35f);
         var style = styleOverride ?? button.Font.Style;
         if (Math.Abs(button.Font.Size - fontSize) < 0.01f && button.Font.Style == style)
         {
@@ -5663,9 +5590,9 @@ public sealed class MainForm : Form
 
     private void EnsureLoadingShieldInContentPanel()
     {
-        if (!_contentPanel.Controls.Contains(_loadingShieldPanel))
+        if (!_loadingShieldPanel.IsDisposed && !Controls.Contains(_loadingShieldPanel))
         {
-            _contentPanel.Controls.Add(_loadingShieldPanel);
+            Controls.Add(_loadingShieldPanel);
         }
     }
 
@@ -5681,21 +5608,22 @@ public sealed class MainForm : Form
 
         var activeJob = _queueState.Jobs.FirstOrDefault(job => job.Kind == OperationJobKind.Scan
             && job.State is OperationJobState.Running or OperationJobState.Queued);
-        _loadingShieldTitleLabel.Text = activeJob is null
+        var title = activeJob is null
             ? "正在准备刷新"
             : "正在后台刷新";
-        _loadingShieldDetailLabel.Text = activeJob is null
+        var detail = activeJob is null
             ? "界面保持稳定，候选列表稍后显示。"
             : BuildCompactJobSummary(activeJob);
-        _loadingShieldProgressBar.Value = activeJob is null ? 0 : GetJobProgressBarValue(activeJob);
-        _loadingShieldProgressBar.IsIndeterminate = activeJob is not null
+        var progressValue = activeJob is null ? 0 : GetJobProgressBarValue(activeJob);
+        var indeterminate = activeJob is not null
             && activeJob.IsIndeterminate
             && activeJob.Percent <= 0
             && activeJob.State == OperationJobState.Running;
+        _loadingShieldPanel.SetStatus(title, detail, progressValue, indeterminate);
 
         if (_activeContentControl is not null && !_activeContentControl.IsDisposed)
         {
-            _activeContentControl.Visible = !show;
+            _activeContentControl.Visible = true;
         }
 
         _loadingShieldPanel.Visible = show;
@@ -6817,7 +6745,7 @@ public sealed class MainForm : Form
         ApplyButtonFont(_cleanupViewButton, dense, ultra);
         ApplyButtonFont(_overviewViewButton, dense, ultra);
         ApplyButtonFont(_infrequentViewButton, dense, ultra);
-        ApplyControlFont(_driveSelectorComboBox, ultra ? 8.35f : dense ? 8.7f : 9f);
+        ApplyControlFont(_driveSelectorComboBox, ultra ? 8.55f : dense ? 8.9f : 9.2f);
         _driveSelectorComboBox.Width = ultra ? 74 : dense ? 84 : 96;
         RefreshPillButtonSizing(_cleanupViewButton, compact: false, dense, ultra);
         RefreshPillButtonSizing(_overviewViewButton, compact: false, dense, ultra);
@@ -7024,7 +6952,7 @@ public sealed class MainForm : Form
     {
         var minimumWidth = compact
             ? (ultraDense ? 58 : dense ? 66 : 74)
-            : (ultraDense ? 60 : dense ? 64 : 70);
+            : (ultraDense ? 64 : dense ? 68 : 72);
         var horizontalPadding = compact
             ? (ultraDense ? 12 : dense ? 16 : 22)
             : (ultraDense ? 10 : dense ? 12 : 14);
@@ -7147,6 +7075,288 @@ public sealed class MainForm : Form
         if (comboBox.Items.Count > 0)
         {
             comboBox.SelectedIndex = 0;
+        }
+    }
+
+    private sealed class LoadingShieldPanel : Panel
+    {
+        private const int BottomProgressCardReserve = 150;
+        private string _statusTitle = "正在后台刷新";
+        private string _statusDetail = "保持界面稳定，完成后显示最新候选。";
+        private int _progressValue;
+        private bool _isIndeterminate;
+
+        public LoadingShieldPanel()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint
+                | ControlStyles.OptimizedDoubleBuffer
+                | ControlStyles.ResizeRedraw
+                | ControlStyles.UserPaint
+                | ControlStyles.Opaque,
+                true);
+            BackColor = UiThemePalette.Surface;
+            UpdateStyles();
+        }
+
+        public void SetStatus(string title, string detail, int progressValue, bool isIndeterminate)
+        {
+            progressValue = Math.Clamp(progressValue, 0, 100);
+            if (string.Equals(_statusTitle, title, StringComparison.Ordinal)
+                && string.Equals(_statusDetail, detail, StringComparison.Ordinal)
+                && _progressValue == progressValue
+                && _isIndeterminate == isIndeterminate)
+            {
+                return;
+            }
+
+            _statusTitle = title;
+            _statusDetail = detail;
+            _progressValue = progressValue;
+            _isIndeterminate = isIndeterminate;
+            InvalidateProgressCardOnly();
+        }
+
+        public void InvalidateProgressCardOnly()
+        {
+            if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+            {
+                return;
+            }
+
+            var region = new Rectangle(
+                0,
+                Math.Max(0, ClientSize.Height - BottomProgressCardReserve - 28),
+                ClientSize.Width,
+                Math.Min(ClientSize.Height, BottomProgressCardReserve + 28));
+            Invalidate(region, invalidateChildren: true);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            // The panel is fully owner-painted to avoid WinForms clearing old child pixels during loading.
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var graphics = e.Graphics;
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            var bounds = ClientRectangle;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            using (var background = new LinearGradientBrush(
+                       bounds,
+                       UiThemePalette.WindowBackground,
+                       UiThemePalette.Surface,
+                       LinearGradientMode.Vertical))
+            {
+                graphics.FillRectangle(background, bounds);
+            }
+
+            DrawAmbientGrid(graphics, bounds);
+            DrawSkeletonTable(graphics, bounds);
+            DrawLowerGlow(graphics, bounds);
+            DrawProgressCard(graphics, bounds);
+        }
+
+        private static void DrawAmbientGrid(Graphics graphics, Rectangle bounds)
+        {
+            using var railPen = new Pen(Color.FromArgb(68, UiThemePalette.AccentStrong), 1.4f);
+            using var mutedPen = new Pen(Color.FromArgb(72, UiThemePalette.BorderMuted), 1f);
+            var left = bounds.Left + 24;
+            var right = bounds.Right - 24;
+            var top = bounds.Top + 22;
+            var bottom = Math.Max(top + 80, bounds.Bottom - BottomProgressCardReserve - 20);
+
+            graphics.DrawLine(railPen, left, top, Math.Min(right, left + 180), top);
+            graphics.DrawLine(mutedPen, left, top + 32, right, top + 32);
+            for (var y = top + 74; y < bottom; y += 64)
+            {
+                graphics.DrawLine(mutedPen, left, y, right, y);
+            }
+        }
+
+        private static void DrawSkeletonTable(Graphics graphics, Rectangle bounds)
+        {
+            var outer = Rectangle.Inflate(bounds, -24, -24);
+            outer.Height = Math.Max(160, outer.Height - BottomProgressCardReserve);
+            if (outer.Width < 240 || outer.Height < 160)
+            {
+                return;
+            }
+
+            var headerTop = outer.Top + 42;
+            var table = new Rectangle(outer.Left, headerTop, outer.Width, Math.Max(120, outer.Bottom - headerTop));
+            using var panelBrush = new SolidBrush(Color.FromArgb(245, UiThemePalette.SurfaceRaised));
+            using var headerBrush = new SolidBrush(UiThemePalette.SurfaceHeader);
+            using var rowBrush = new SolidBrush(Color.FromArgb(230, UiThemePalette.Surface));
+            using var alternateRowBrush = new SolidBrush(Color.FromArgb(240, UiThemePalette.SurfaceMuted));
+            using var linePen = new Pen(Color.FromArgb(145, UiThemePalette.GridLine), 1f);
+            using var borderPen = new Pen(Color.FromArgb(170, UiThemePalette.BorderMuted), 1f);
+            using var accentPen = new Pen(Color.FromArgb(190, UiThemePalette.Accent), 2f);
+            using var textBrush = new SolidBrush(Color.FromArgb(132, UiThemePalette.TextSecondary));
+            using var textWeakBrush = new SolidBrush(Color.FromArgb(100, UiThemePalette.TextMuted));
+            using var iconBrush = new SolidBrush(Color.FromArgb(185, UiThemePalette.AccentSurfaceRaised));
+            using var iconTabBrush = new SolidBrush(Color.FromArgb(170, UiThemePalette.AccentSurface));
+
+            FillRoundedRectangle(graphics, panelBrush, table, 14);
+            using (var tablePath = CreateRoundedRect(table, 14))
+            {
+                graphics.DrawPath(borderPen, tablePath);
+            }
+
+            var header = new Rectangle(table.Left + 1, table.Top + 1, table.Width - 2, 42);
+            graphics.FillRectangle(headerBrush, header);
+            graphics.DrawLine(accentPen, header.Left + 18, header.Bottom - 1, Math.Min(header.Right - 18, header.Left + 190), header.Bottom - 1);
+
+            var headerBars = new[]
+            {
+                new Rectangle(header.Left + 52, header.Top + 15, 96, 9),
+                new Rectangle(header.Left + 210, header.Top + 15, 78, 9),
+                new Rectangle(header.Left + 340, header.Top + 15, 118, 9),
+                new Rectangle(header.Right - 180, header.Top + 15, 128, 9)
+            };
+            foreach (var bar in headerBars.Where(bar => bar.Right < header.Right - 18))
+            {
+                FillRoundedRectangle(graphics, textWeakBrush, bar, 5);
+            }
+
+            var rowTop = header.Bottom;
+            var rowHeight = 34;
+            var availableRows = Math.Max(3, (table.Bottom - rowTop - 8) / rowHeight);
+            var rows = Math.Min(13, availableRows);
+            for (var i = 0; i < rows; i++)
+            {
+                var y = rowTop + i * rowHeight;
+                var row = new Rectangle(table.Left + 1, y, table.Width - 2, rowHeight);
+                graphics.FillRectangle(i % 2 == 0 ? rowBrush : alternateRowBrush, row);
+                graphics.DrawLine(linePen, row.Left + 16, row.Bottom - 1, row.Right - 16, row.Bottom - 1);
+
+                DrawFolderGlyph(graphics, iconBrush, iconTabBrush, row.Left + 22, row.Top + 9);
+
+                var primaryWidth = Math.Min(row.Width - 240, 150 + (i % 5) * 22);
+                var secondaryWidth = Math.Min(row.Width - 390, 92 + (i % 4) * 25);
+                FillRoundedRectangle(graphics, textBrush, new Rectangle(row.Left + 58, row.Top + 12, Math.Max(70, primaryWidth), 8), 4);
+                if (secondaryWidth > 50)
+                {
+                    FillRoundedRectangle(graphics, textWeakBrush, new Rectangle(row.Left + 254, row.Top + 12, secondaryWidth, 8), 4);
+                }
+
+                var rightBarWidth = 76 + (i % 3) * 18;
+                if (row.Right - rightBarWidth - 36 > row.Left + 420)
+                {
+                    FillRoundedRectangle(graphics, textWeakBrush, new Rectangle(row.Right - rightBarWidth - 36, row.Top + 12, rightBarWidth, 8), 4);
+                }
+            }
+        }
+
+        private static void DrawLowerGlow(Graphics graphics, Rectangle bounds)
+        {
+            var glowBounds = new Rectangle(bounds.Left, Math.Max(bounds.Top, bounds.Bottom - 190), bounds.Width, 190);
+            using var glowBrush = new LinearGradientBrush(
+                glowBounds,
+                Color.FromArgb(0, UiThemePalette.Accent),
+                Color.FromArgb(28, UiThemePalette.Accent),
+                LinearGradientMode.Vertical);
+            graphics.FillRectangle(glowBrush, glowBounds);
+        }
+
+        private void DrawProgressCard(Graphics graphics, Rectangle bounds)
+        {
+            var cardWidth = Math.Max(280, bounds.Width - 48);
+            var cardHeight = 96;
+            var card = new Rectangle(
+                bounds.Left + 24,
+                Math.Max(bounds.Top + 24, bounds.Bottom - cardHeight - 24),
+                cardWidth,
+                cardHeight);
+            using var cardBrush = new SolidBrush(UiThemePalette.SurfaceRaised);
+            using var borderPen = new Pen(Color.FromArgb(180, UiThemePalette.BorderStrong), 1f);
+            using var glowPen = new Pen(Color.FromArgb(125, UiThemePalette.AccentStrong), 1.5f);
+            FillRoundedRectangle(graphics, cardBrush, card, 16);
+            using (var cardPath = CreateRoundedRect(card, 16))
+            {
+                graphics.DrawPath(borderPen, cardPath);
+            }
+
+            graphics.DrawLine(glowPen, card.Left + 18, card.Top + 1, Math.Min(card.Right - 18, card.Left + 210), card.Top + 1);
+
+            using var titleFont = new Font("Microsoft YaHei UI", 11.2f, FontStyle.Bold);
+            using var detailFont = new Font("Microsoft YaHei UI", 9.2f, FontStyle.Regular);
+            using var titleBrush = new SolidBrush(UiThemePalette.TextPrimary);
+            using var detailBrush = new SolidBrush(UiThemePalette.TextSecondary);
+            using var accentBrush = new SolidBrush(UiThemePalette.AccentStrong);
+            var textLeft = card.Left + 18;
+            graphics.FillEllipse(accentBrush, textLeft, card.Top + 19, 8, 8);
+            graphics.DrawString(_statusTitle, titleFont, titleBrush, new PointF(textLeft + 16, card.Top + 13));
+            graphics.DrawString(Ellipsize(_statusDetail, 96), detailFont, detailBrush, new RectangleF(textLeft, card.Top + 40, card.Width - 36, 20));
+
+            var progressTrack = new Rectangle(card.Left + 18, card.Bottom - 24, card.Width - 36, 8);
+            using var trackBrush = new SolidBrush(UiThemePalette.SurfaceMuted);
+            using var fillBrush = new SolidBrush(UiThemePalette.Accent);
+            FillRoundedRectangle(graphics, trackBrush, progressTrack, 4);
+            var ratio = _isIndeterminate ? 0.12f : Math.Clamp(_progressValue / 100f, 0f, 1f);
+            if (ratio > 0f)
+            {
+                var fill = progressTrack;
+                fill.Width = Math.Clamp((int)Math.Round(progressTrack.Width * ratio), Math.Min(progressTrack.Width, progressTrack.Height), progressTrack.Width);
+                FillRoundedRectangle(graphics, fillBrush, fill, 4);
+            }
+        }
+
+        private static string Ellipsize(string text, int maxLength)
+        {
+            if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            {
+                return text;
+            }
+
+            return text[..Math.Max(0, maxLength - 1)] + "…";
+        }
+
+        private static void DrawFolderGlyph(Graphics graphics, Brush bodyBrush, Brush tabBrush, int x, int y)
+        {
+            var tab = new Rectangle(x + 1, y, 12, 5);
+            var body = new Rectangle(x, y + 4, 22, 15);
+            FillRoundedRectangle(graphics, tabBrush, tab, 3);
+            FillRoundedRectangle(graphics, bodyBrush, body, 5);
+        }
+
+        private static void FillRoundedRectangle(Graphics graphics, Brush brush, Rectangle bounds, int radius)
+        {
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            using var path = CreateRoundedRect(bounds, radius);
+            graphics.FillPath(brush, path);
+        }
+
+        private static GraphicsPath CreateRoundedRect(Rectangle bounds, int radius)
+        {
+            var path = new GraphicsPath();
+            radius = Math.Min(radius, Math.Min(bounds.Width, bounds.Height) / 2);
+            if (radius <= 1)
+            {
+                path.AddRectangle(bounds);
+                path.CloseFigure();
+                return path;
+            }
+
+            var diameter = radius * 2;
+            path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
+            path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
+            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+            return path;
         }
     }
 

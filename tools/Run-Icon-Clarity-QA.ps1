@@ -13,6 +13,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue) {
+    $global:PSNativeCommandUseErrorActionPreference = $false
+}
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($PublishedExe)) {
     $PublishedExe = Join-Path $ProjectRoot "publish\PortableCDriveCleaner-Windows\PortableCDriveCleaner.exe"
@@ -322,11 +325,149 @@ function Add-ScreenshotHealthFailures {
             continue
         }
 
-        $length = (Get-Item -LiteralPath $screenshotPath).Length
-        if ($length -lt 12000) {
-            $Failures.Add(("Screenshot too small to trust: {0} ({1} bytes)." -f $screenshotPath, $length))
+        $image = $null
+        try {
+            $image = [System.Drawing.Image]::FromFile($screenshotPath)
+            if ($image.Width -lt 760 -or $image.Height -lt 520) {
+                $Failures.Add(("Screenshot dimensions too small to trust: {0} ({1}x{2})." -f $screenshotPath, $image.Width, $image.Height))
+            }
+        }
+        catch {
+            $Failures.Add(("Screenshot unreadable: {0}. {1}" -f $screenshotPath, $_.Exception.Message))
+        }
+        finally {
+            if ($null -ne $image) {
+                $image.Dispose()
+            }
         }
     }
+}
+
+function Resolve-ImageMagickPath {
+    $command = Get-Command "magick.exe" -ErrorAction SilentlyContinue
+    if ($null -ne $command) {
+        return $command.Source
+    }
+
+    $knownPaths = @(
+        "C:\Program Files\ImageMagick-7.1.2-Q16-HDRI\magick.exe",
+        "C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe",
+        "C:\Program Files\ImageMagick-7.1.0-Q16-HDRI\magick.exe"
+    )
+
+    foreach ($path in $knownPaths) {
+        if (Test-Path -LiteralPath $path) {
+            return $path
+        }
+    }
+
+    return ""
+}
+
+function Invoke-ImageMagick {
+    param(
+        [string]$MagickPath,
+        [string[]]$Arguments
+    )
+
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $MagickPath
+    $startInfo.Arguments = (($Arguments | ForEach-Object { ConvertTo-CommandLineArgument $_ }) -join " ")
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    $standardOutput = $process.StandardOutput.ReadToEnd()
+    $standardError = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+    [pscustomobject]@{
+        ExitCode = $process.ExitCode
+        Output = (($standardOutput + "`n" + $standardError).Trim())
+    }
+}
+
+function Get-PngDimensions {
+    param([string]$Path)
+
+    $image = $null
+    try {
+        $image = [System.Drawing.Image]::FromFile($Path)
+        return [pscustomobject]@{
+            Width = $image.Width
+            Height = $image.Height
+        }
+    }
+    finally {
+        if ($null -ne $image) {
+            $image.Dispose()
+        }
+    }
+}
+
+function Add-LoadingStabilityFailures {
+    param(
+        [System.Collections.Generic.List[string]]$Failures,
+        [string[]]$LoadingScreenshots,
+        [string]$CycleRoot
+    )
+
+    $metrics = New-Object System.Collections.Generic.List[object]
+    $magickPath = Resolve-ImageMagickPath
+    if ([string]::IsNullOrWhiteSpace($magickPath) -or -not (Test-Path -LiteralPath $magickPath)) {
+        $Failures.Add("ImageMagick magick.exe not found; loading stability comparison is required.")
+        return $metrics.ToArray()
+    }
+
+    $stabilityRoot = Join-Path $CycleRoot "loading-stability"
+    Ensure-Directory -Path $stabilityRoot
+    $startIndex = [Math]::Min(3, [Math]::Max(0, $LoadingScreenshots.Count - 2))
+    $endIndex = [Math]::Max($startIndex, $LoadingScreenshots.Count - 2)
+    for ($i = $startIndex; $i -le $endIndex; $i++) {
+        $first = $LoadingScreenshots[$i]
+        $second = $LoadingScreenshots[$i + 1]
+        if (-not (Test-Path -LiteralPath $first) -or -not (Test-Path -LiteralPath $second)) {
+            continue
+        }
+
+        $dimensions = Get-PngDimensions -Path $first
+        $cropY = [Math]::Min(90, [Math]::Max(0, [int]($dimensions.Height * 0.18)))
+        $cropHeight = [Math]::Min([Math]::Max(220, $dimensions.Height - 240), $dimensions.Height - $cropY - 24)
+        if ($cropHeight -lt 160) {
+            $Failures.Add(("Loading stability crop too small to trust: {0}x{1}+0+{2}" -f $dimensions.Width, $cropHeight, $cropY))
+            continue
+        }
+
+        $cropGeometry = ("{0}x{1}+0+{2}" -f $dimensions.Width, $cropHeight, $cropY)
+        $firstCrop = Join-Path $stabilityRoot ("loading-{0:00}-static.png" -f $i)
+        $secondCrop = Join-Path $stabilityRoot ("loading-{0:00}-static.png" -f ($i + 1))
+        $compareOutput = Join-Path $stabilityRoot ("loading-{0:00}-{1:00}-diff.png" -f $i, ($i + 1))
+
+        [void](Invoke-ImageMagick -MagickPath $magickPath -Arguments @($first, "-crop", $cropGeometry, "+repage", $firstCrop))
+        [void](Invoke-ImageMagick -MagickPath $magickPath -Arguments @($second, "-crop", $cropGeometry, "+repage", $secondCrop))
+        $comparison = Invoke-ImageMagick -MagickPath $magickPath -Arguments @("compare", "-metric", "AE", $firstCrop, $secondCrop, $compareOutput)
+        $match = [regex]::Match($comparison.Output, '^\s*(\d+)')
+        if (-not $match.Success) {
+            $Failures.Add(("ImageMagick compare did not return an AE metric for loading screenshots {0} and {1}: {2}" -f $i, ($i + 1), $comparison.Output))
+            continue
+        }
+
+        $delta = [int]$match.Groups[1].Value
+        $metric = [pscustomobject]@{
+            From = [IO.Path]::GetFileName($first)
+            To = [IO.Path]::GetFileName($second)
+            Crop = $cropGeometry
+            StaticAreaChangedPixels = $delta
+            DiffImage = $compareOutput
+            Tool = $magickPath
+        }
+        $metrics.Add($metric)
+        if ($delta -gt 120) {
+            $Failures.Add(("Loading static area still jitters between {0} and {1}: {2} changed pixels, crop {3}." -f $metric.From, $metric.To, $delta, $cropGeometry))
+        }
+    }
+
+    return $metrics.ToArray()
 }
 
 function ConvertTo-CommandLineArgument {
@@ -470,6 +611,7 @@ function Invoke-OneCycle {
         $populatedLargeShot
         $populatedSmallShot
     )
+    $loadingStabilityMetrics = Add-LoadingStabilityFailures -Failures $qaFailures -LoadingScreenshots $loadingScreenshots.ToArray() -CycleRoot $cycleRoot
 
     Start-Sleep -Seconds 1
     $closedNormally = Close-AppWindow -Process $windowProcess -Handle $handle
@@ -506,6 +648,7 @@ function Invoke-OneCycle {
         ClosedNormally = $closedNormally
         ResidualProcess = $stillRunning
         LoadingScreenshots = $loadingScreenshots.ToArray()
+        LoadingStabilityMetrics = $loadingStabilityMetrics
         LaunchScreenshot = $launchShot
         LargeScreenshot = $largeShot
         SmallScreenshot = $smallShot
@@ -544,6 +687,7 @@ $environmentReport = [pscustomobject]@{
     PublishScript = $PublishScript
     QaView = $QaView
     AllowStartupRefresh = [bool]$AllowStartupRefresh
+    ImageMagickPath = Resolve-ImageMagickPath
 }
 $environmentReport | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $outputRoot "environment.json") -Encoding UTF8
 

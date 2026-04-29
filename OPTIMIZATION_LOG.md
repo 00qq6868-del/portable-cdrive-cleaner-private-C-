@@ -406,6 +406,41 @@
 - 风险 / 备注：
   - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA
 
+## 2026-04-29 10:23:22
+- 模块：加载抖动专项 + 外部图像验收
+- 任务：加载期真实数据优先、去除空黑遮罩、ImageMagick 静态区差异硬门槛
+- 检查点模式：Progress
+- 已完成：
+  - 修复用户最新反馈的“加载时一直抖动、东西还看不见”：全屏加载遮罩只在没有任何候选行时启用；首批 C 盘候选出现后立刻显示真实表格，后续扫描快照延后合并，避免加载期反复换表。
+  - 删除破损的 `DrawToBitmap` 背景方案，避免高 DPI 下旧控件碎片、裁切按钮、脏像素被复制到加载画面。
+  - 新增 owner-painted `LoadingShieldPanel`，极早期无数据时手绘稳定骨架和进度卡，不使用透明子控件或截图背景。
+  - 顶部按钮/盘符下拉字体轻微增大，同时继续保持按钮宽度接近文字宽度。
+  - QA 脚本接入已安装的外部工具 ImageMagick，连续加载截图静态区域 AE 差异超过阈值即 FAIL。
+- 修改文件：
+- Forms/MainForm.cs
+- tools/Run-Icon-Clarity-QA.ps1
+- SOURCE_CHANGE_LEDGER.md
+- TODO_NOT_FIXED.md
+- OPTIMIZATION_LOG.md
+- AI_STATE.json
+- CURRENT_TASK.md
+- INTERRUPTED_PROGRESS.md
+- 剩余项：
+- 用户最终主观视觉确认仍未完成，不能把 `PASS_PENDING_VISUAL` 写成最终验收通过
+- 图标是否达到桌面快捷方式级清晰度仍需继续人眼验收和可能的单项提取链优化
+- 商业第一水准的顶部 HUD、内饰、科技感仍需继续视觉深化
+- 检查点文件：
+  - `checkpoints/2026-04-29_102322_progress.md`
+- 是否请求推送：是
+- 结果：
+  - `dotnet build .\PortableCDriveCleaner.csproj` 0 warning / 0 error
+  - 正式三轮安装版 QA：`artifacts/icon-qa/2026-04-29_102322/`，三轮 `Failures=0`、无残留进程
+  - 三轮启动约 `2.42s / 2.14s / 2.56s`，DPI `168`
+  - 三轮加载静态区 ImageMagick AE 最大差异均为 `0`
+  - QA 状态三轮均为 `LoadingShieldVisible=false`、`ActiveVisibleRows=31`、`ContentHeightRatio=0.76`、`MaxViewButtonExcess=18`、`MaxActionButtonExcess=18`
+- 风险 / 备注：
+  - 原始截图与 diff 图只保留在本地 `artifacts/`，不提交公开仓库；公开仓库只提交脱敏摘要。
+
 ## 2026-04-24 23:35:20
 - 模块：GitHub 状态对齐修正
 - 任务：补齐 checkpoint 被截断的未完成项，防止跨窗口接力时丢状态
