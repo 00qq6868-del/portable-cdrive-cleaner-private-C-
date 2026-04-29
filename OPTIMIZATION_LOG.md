@@ -1011,3 +1011,24 @@
 - 风险 / 备注：
 - `artifacts/icon-qa/*` 是本地原始证据，公开仓库不提交。
 - 中间 QA 目录 `2026-04-29_173517` 有一轮失败，原因是 QA 截图工具偶发捕获小矩形，不是业务窗口崩溃；已修复工具并按规则重新跑完整三轮。
+
+## 2026-04-29 19:12:47
+- 模块：GitHub 持久记忆与 checkpoint
+- 任务：彻底修复加载抖动、未加载完 resize 卡顿、文件图标误显示文件夹、短标签裁切
+- 检查点模式：Finish
+- 已完成：
+  - 本轮完成加载刷新链和图标语义收口：清理候选不再硬编码文件夹；文件目标只使用文件/文档/包/应用语义兜底；UI 线程绘制改用轻量兜底图标；扫描中间快照在加载和 resize 期间延迟呈现，最终 scan-completed 后一次性落表；短按钮取消省略绘制并增加安全内边距。dotnet build 0 警告 0 错误；publish.ps1 已同步安装版；QA 脚本新增 scan-completed 等待、加载静态区 ImageMagick 对比、按钮裁切和文件行文件夹语义硬门槛；2026-04-29_185923 三轮安装版 QA 全部 PASS_PENDING_VISUAL，Loading static delta 最大 0，文件行文件夹语义 0。
+- 修改文件：
+- Forms/MainForm.cs
+- Forms/ThemedButton.cs
+- Infrastructure/IconSemanticResolver.cs
+- tools/Run-Icon-Clarity-QA.ps1
+- 剩余项：
+- 自动硬门槛已通过，但商业审美是否彻底满意仍需用户最终视觉确认；FlaUInspect/dotnet-trace 下载因 GitHub/NuGet 连接失败未落地，本轮实际使用 ImageMagick 和安装版 QA 完成验证。
+- 检查点文件：
+  - checkpoints/2026-04-29_191247_finish.md
+- 是否请求推送：是
+- 结果：
+  - 已写回 AI_STATE.json、CURRENT_TASK.md、INTERRUPTED_PROGRESS.md 和检查点快照
+- 风险 / 备注：
+  - last_commit 记录的是写 checkpoint 前最近已知的提交 SHA

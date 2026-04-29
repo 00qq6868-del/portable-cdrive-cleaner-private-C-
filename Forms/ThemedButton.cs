@@ -159,7 +159,7 @@ public sealed class ThemedButton : Button
             graphics.DrawPath(focusPen, focusPath);
         }
 
-        var textBounds = Rectangle.Inflate(bounds, -8, -4);
+        var textBounds = Rectangle.Inflate(bounds, -5, -3);
         TextRenderer.DrawText(
             graphics,
             Text,
@@ -168,8 +168,8 @@ public sealed class ThemedButton : Button
             state.TextColor,
             TextFormatFlags.HorizontalCenter
             | TextFormatFlags.VerticalCenter
-            | TextFormatFlags.EndEllipsis
             | TextFormatFlags.NoPrefix
+            | TextFormatFlags.NoPadding
             | TextFormatFlags.SingleLine);
     }
 

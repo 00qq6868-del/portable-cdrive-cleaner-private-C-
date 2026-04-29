@@ -317,6 +317,26 @@ function Wait-QAStateFile {
     return $null
 }
 
+function Wait-QAStateStage {
+    param(
+        [string]$Path,
+        [string]$DesiredStage,
+        [int]$TimeoutSeconds = 240
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        $state = Wait-QAStateFile -Path $Path -TimeoutSeconds 2
+        if ($null -ne $state -and $state.Stage -eq $DesiredStage) {
+            return $state
+        }
+
+        Start-Sleep -Milliseconds 500
+    } while ((Get-Date) -lt $deadline)
+
+    return $null
+}
+
 function Get-JsonPropertyValue {
     param(
         [object]$Object,
@@ -459,7 +479,10 @@ function Add-LoadingStabilityFailures {
 
         $dimensions = Get-PngDimensions -Path $first
         $cropY = [Math]::Min(90, [Math]::Max(0, [int]($dimensions.Height * 0.18)))
-        $cropHeight = [Math]::Min([Math]::Max(220, $dimensions.Height - 240), $dimensions.Height - $cropY - 24)
+        $dynamicBottomReserve = [Math]::Max(240, [int]($dimensions.Height * 0.28))
+        $cropHeight = [Math]::Min(
+            [Math]::Max(220, $dimensions.Height - $dynamicBottomReserve - $cropY),
+            $dimensions.Height - $cropY - $dynamicBottomReserve)
         if ($cropHeight -lt 160) {
             $Failures.Add(("Loading stability crop too small to trust: {0}x{1}+0+{2}" -f $dimensions.Width, $cropHeight, $cropY))
             continue
@@ -588,9 +611,24 @@ function Invoke-OneCycle {
             $qaFailures.Add(("View mode buttons are still oversized: max ratio {0}." -f $maxViewButtonRatio))
         }
 
+        $tooTightViewButtons = @($qaState.ViewButtonMetrics | Where-Object { [int]$_.Excess -lt 18 })
+        if ($tooTightViewButtons.Count -gt 0) {
+            $qaFailures.Add(("View mode buttons may clip text: {0}" -f (($tooTightViewButtons | ForEach-Object { "$($_.Text) excess=$($_.Excess)px" }) -join "; ")))
+        }
+
         $maxActionButtonExcess = [int](Get-JsonPropertyValue -Object $qaState -Name "MaxActionButtonExcess" -DefaultValue 0)
         if ($maxActionButtonExcess -gt 62) {
             $qaFailures.Add(("Toolbar buttons are still too wide: max excess {0}px." -f $maxActionButtonExcess))
+        }
+
+        $tooTightActionButtons = @($qaState.ActionButtonMetrics | Where-Object { [int]$_.Excess -lt 14 })
+        if ($tooTightActionButtons.Count -gt 0) {
+            $qaFailures.Add(("Toolbar buttons may clip text: {0}" -f (($tooTightActionButtons | ForEach-Object { "$($_.Text) excess=$($_.Excess)px" }) -join "; ")))
+        }
+
+        $folderSemanticFileRows = [int](Get-JsonPropertyValue -Object $qaState -Name "CleanupFileRowsWithFolderSemantic" -DefaultValue 0)
+        if ($folderSemanticFileRows -gt 0) {
+            $qaFailures.Add(("File cleanup rows still use folder-like icon semantics: {0} rows." -f $folderSemanticFileRows))
         }
     }
 
@@ -610,6 +648,37 @@ function Invoke-OneCycle {
     Exercise-ResizePath -Handle $handle
     $resizeStressShot = Join-Path $cycleRoot "03b-resize-stress.png"
     Save-WindowScreenshot -Handle $handle -OutputPath $resizeStressShot
+
+    if ($AllowStartupRefresh) {
+        $completedQaState = Wait-QAStateStage -Path $qaStateFile -DesiredStage "scan-completed" -TimeoutSeconds 240
+        if ($null -eq $completedQaState) {
+            $latestState = Wait-QAStateFile -Path $qaStateFile -TimeoutSeconds 2
+            $latestStage = if ($null -eq $latestState) { "<missing>" } else { $latestState.Stage }
+            $latestPhase = if ($null -eq $latestState) { "<missing>" } else { $latestState.SnapshotPhase }
+            $qaFailures.Add(("Scan did not complete before final screenshots. Latest stage={0}, phase={1}." -f $latestStage, $latestPhase))
+        }
+        else {
+            $qaState = $completedQaState
+            if ([int]$qaState.ActiveVisibleRows -lt 3) {
+                $qaFailures.Add(("Completed scan should still show at least 3 active rows, got {0}." -f $qaState.ActiveVisibleRows))
+            }
+
+            $folderSemanticFileRows = [int](Get-JsonPropertyValue -Object $qaState -Name "CleanupFileRowsWithFolderSemantic" -DefaultValue 0)
+            if ($folderSemanticFileRows -gt 0) {
+                $qaFailures.Add(("Completed scan still has file rows using folder-like icon semantics: {0} rows." -f $folderSemanticFileRows))
+            }
+
+            $tooTightViewButtons = @($qaState.ViewButtonMetrics | Where-Object { [int]$_.Excess -lt 18 })
+            if ($tooTightViewButtons.Count -gt 0) {
+                $qaFailures.Add(("Completed view mode buttons may clip text: {0}" -f (($tooTightViewButtons | ForEach-Object { "$($_.Text) excess=$($_.Excess)px" }) -join "; ")))
+            }
+
+            $tooTightActionButtons = @($qaState.ActionButtonMetrics | Where-Object { [int]$_.Excess -lt 14 })
+            if ($tooTightActionButtons.Count -gt 0) {
+                $qaFailures.Add(("Completed toolbar buttons may clip text: {0}" -f (($tooTightActionButtons | ForEach-Object { "$($_.Text) excess=$($_.Excess)px" }) -join "; ")))
+            }
+        }
+    }
 
     Start-Sleep -Seconds 12
     $settledShot = Join-Path $cycleRoot "04-settled.png"

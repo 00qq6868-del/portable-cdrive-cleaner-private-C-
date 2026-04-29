@@ -187,6 +187,7 @@ public sealed class MainForm : Form
     private bool _scanVisualLockArmed;
     private Control? _activeContentControl;
     private ScanSnapshot? _deferredVisibleScanSnapshot;
+    private ScanSnapshot? _deferredCompletedScanSnapshot;
     private LayoutDensityMode _layoutDensityMode;
     private bool IsWideMode => WindowState == FormWindowState.Maximized || ClientSize.Width >= WideModeThreshold;
     private bool IsCompactLayout => _layoutDensityMode != LayoutDensityMode.Regular;
@@ -304,6 +305,7 @@ public sealed class MainForm : Form
             ResumeResizeSensitiveLayout();
             SetHeavyRedrawSuspended(suspend: false);
             FlushDeferredResizeRefresh(forceLayout: true);
+            ApplyDeferredCompletedScanSnapshotIfReady();
         };
         DpiChanged += (_, _) => BeginInvoke(new Action(HandleDpiChanged));
         Shown += async (_, _) =>
@@ -1963,6 +1965,11 @@ public sealed class MainForm : Form
 
     private void ReplaceGridItems<T>(DataGridView grid, BindingList<T> bindingList, IReadOnlyList<T> nextItems)
     {
+        if (ReferenceEquals(grid.DataSource, bindingList) && AreSameItems(bindingList, nextItems))
+        {
+            return;
+        }
+
         var firstDisplayedIndex = TryGetFirstDisplayedRowIndex(grid);
         var currentColumnIndex = grid.CurrentCell?.ColumnIndex ?? -1;
         var suspendRedraw = grid.IsHandleCreated && !_resizeDragInProgress;
@@ -2020,6 +2027,24 @@ public sealed class MainForm : Form
                 RedrawNow(parent.Handle);
             }
         }
+    }
+
+    private static bool AreSameItems<T>(IReadOnlyList<T> currentItems, IReadOnlyList<T> nextItems)
+    {
+        if (currentItems.Count != nextItems.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < currentItems.Count; i++)
+        {
+            if (!ReferenceEquals(currentItems[i], nextItems[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static int TryGetFirstDisplayedRowIndex(DataGridView grid)
@@ -2173,7 +2198,7 @@ public sealed class MainForm : Form
                 ResolveCleanupIconRequest(row),
                 iconSize);
             refreshed++;
-            if (refreshed % 24 == 0)
+            if (!_scanStabilityMode && refreshed % 96 == 0)
             {
                 InvalidateCleanupIconColumn();
             }
@@ -2203,7 +2228,7 @@ public sealed class MainForm : Form
                 ResolveOverviewIconRequest(entry),
                 iconSize);
             refreshed++;
-            if (refreshed % 24 == 0)
+            if (!_scanStabilityMode && refreshed % 96 == 0)
             {
                 InvalidateOverviewIconColumn();
             }
@@ -4248,10 +4273,8 @@ public sealed class MainForm : Form
         if (ShouldDeferScanSnapshotPresentation())
         {
             _deferredVisibleScanSnapshot = snapshot;
-            UpdateScanWarningBanner(snapshot.Warnings);
             SetStatusMessage(string.IsNullOrWhiteSpace(snapshot.PhaseLabel) ? fallbackMessage : snapshot.PhaseLabel);
-            UpdateScanStabilityMode(forceRepaint: true);
-            QueueVisualStabilizationAfterDataChange(forceLayout: true);
+            UpdateScanStabilityMode();
             return;
         }
 
@@ -4298,10 +4321,64 @@ public sealed class MainForm : Form
 
     private bool ShouldDeferScanSnapshotPresentation()
     {
-        return IsUltraCompactLayout
-            && _viewMode == MainViewMode.CleanupCandidates
+        if ((_resizeDragInProgress || WindowState == FormWindowState.Minimized) && _snapshot is not null)
+        {
+            return true;
+        }
+
+        return _viewMode == MainViewMode.CleanupCandidates
             && _allRows.Count > 0
+            && _scanVisualLockArmed
             && HasActiveScanJob();
+    }
+
+    private void ApplyCompletedScanSnapshot(ScanSnapshot snapshot)
+    {
+        if (_resizeDragInProgress || WindowState == FormWindowState.Minimized)
+        {
+            _deferredCompletedScanSnapshot = snapshot;
+            _deferredVisibleScanSnapshot = snapshot;
+            _scanVisualLockArmed = false;
+            SetStatusMessage("扫描已完成，等待窗口稳定后一次性显示最终结果。");
+            WriteQaStateFile("scan-completed-deferred");
+            return;
+        }
+
+        _deferredVisibleScanSnapshot = null;
+        _deferredCompletedScanSnapshot = null;
+        _scanVisualLockArmed = false;
+        ReplaceSnapshot(snapshot);
+        RestoreDeferredStartupViewIfReady(snapshot);
+        _snapshotCacheService.Save(_settings, snapshot);
+        _settingsService.Save(_settings);
+        UpdateDriveSummary();
+        UpdateDriveTabs();
+        UpdateScheduleStatus();
+        UpdateScanStabilityMode(forceRepaint: true);
+        QueueVisualStabilizationAfterDataChange(forceLayout: true);
+        var visibleWarningCount = GetVisibleScanWarnings(snapshot.Warnings).Count;
+        var informationalWarningCount = snapshot.Warnings.Count - visibleWarningCount;
+        var message = visibleWarningCount > 0
+            ? $"扫描完成：发现 {snapshot.CleanupItems.Count} 个候选项目，{visibleWarningCount} 处已跳过受限目录或取证阶段。"
+            : informationalWarningCount > 0
+                ? $"扫描完成：发现 {snapshot.CleanupItems.Count} 个候选项目，并静默跳过了 {informationalWarningCount} 处常见受限目录。"
+            : $"扫描完成：发现 {snapshot.CleanupItems.Count} 个候选项目，并更新了 C 盘总览";
+        SetStatusMessage(message);
+        WriteQaStateFile("scan-completed");
+    }
+
+    private void ApplyDeferredCompletedScanSnapshotIfReady()
+    {
+        if (_deferredCompletedScanSnapshot is null
+            || _resizeDragInProgress
+            || WindowState == FormWindowState.Minimized)
+        {
+            return;
+        }
+
+        var snapshot = _deferredCompletedScanSnapshot;
+        _deferredCompletedScanSnapshot = null;
+        ApplyCompletedScanSnapshot(snapshot);
     }
 
     private bool HasActiveScanJob()
@@ -4392,29 +4469,7 @@ public sealed class MainForm : Form
             warningSummarySelector: BuildScanWarningSummary,
             completed: snapshot =>
             {
-                OnUiThread(() =>
-                {
-                    _deferredVisibleScanSnapshot = null;
-                    _scanVisualLockArmed = false;
-                    ReplaceSnapshot(snapshot);
-                    RestoreDeferredStartupViewIfReady(snapshot);
-                    _snapshotCacheService.Save(_settings, snapshot);
-                    _settingsService.Save(_settings);
-                    UpdateDriveSummary();
-                    UpdateDriveTabs();
-                    UpdateScheduleStatus();
-                    UpdateScanStabilityMode(forceRepaint: true);
-                    QueueVisualStabilizationAfterDataChange(forceLayout: true);
-                    var visibleWarningCount = GetVisibleScanWarnings(snapshot.Warnings).Count;
-                    var informationalWarningCount = snapshot.Warnings.Count - visibleWarningCount;
-                    var message = visibleWarningCount > 0
-                        ? $"扫描完成：发现 {snapshot.CleanupItems.Count} 个候选项目，{visibleWarningCount} 处已跳过受限目录或取证阶段。"
-                        : informationalWarningCount > 0
-                            ? $"扫描完成：发现 {snapshot.CleanupItems.Count} 个候选项目，并静默跳过了 {informationalWarningCount} 处常见受限目录。"
-                        : $"扫描完成：发现 {snapshot.CleanupItems.Count} 个候选项目，并更新了 C 盘总览";
-                    SetStatusMessage(message);
-                    WriteQaStateFile("scan-completed");
-                });
+                OnUiThread(() => ApplyCompletedScanSnapshot(snapshot));
             },
             failed: ex =>
             {
@@ -5168,9 +5223,9 @@ public sealed class MainForm : Form
 
     private void UpdateScanStabilityMode(bool forceRepaint = false)
     {
-        var nextMode = IsUltraCompactLayout
-            && _viewMode == MainViewMode.CleanupCandidates
-            && (_scanVisualLockArmed || HasActiveScanJob())
+        var nextMode = _viewMode == MainViewMode.CleanupCandidates
+            && _scanVisualLockArmed
+            && HasActiveScanJob()
             && _allRows.Count == 0;
         if (!forceRepaint && _scanStabilityMode == nextMode)
         {
@@ -5219,10 +5274,10 @@ public sealed class MainForm : Form
     private static void ApplyButtonFont(Button button, bool compactLayout, bool ultraCompactLayout, FontStyle? styleOverride = null, bool compactQuickFilter = false)
     {
         var fontSize = ultraCompactLayout
-            ? (compactQuickFilter ? 8.35f : 9.0f)
+            ? (compactQuickFilter ? 8.35f : 9.15f)
             : compactLayout
-                ? (compactQuickFilter ? 8.65f : 9.15f)
-                : (compactQuickFilter ? 8.85f : 9.35f);
+                ? (compactQuickFilter ? 8.65f : 9.35f)
+                : (compactQuickFilter ? 8.85f : 9.5f);
         var style = styleOverride ?? button.Font.Style;
         if (Math.Abs(button.Font.Size - fontSize) < 0.01f && button.Font.Style == style)
         {
@@ -5290,6 +5345,8 @@ public sealed class MainForm : Form
         {
             ForceCleanRepaintAfterResize();
         }
+
+        ApplyDeferredCompletedScanSnapshotIfReady();
     }
 
     private void SuspendResizeSensitiveLayout()
@@ -5888,6 +5945,10 @@ public sealed class MainForm : Form
             var contentHeightRatio = ClientSize.Height <= 0
                 ? 0d
                 : Math.Round(_contentPanel.Height / (double)ClientSize.Height, 3);
+            var cleanupVisibleFileRows = _visibleRows.Count(row => row.Item.TargetKind is CleanupTargetKind.FilePermanent or CleanupTargetKind.FileRecycle);
+            var cleanupFileRowsWithFolderSemantic = _visibleRows.Count(row =>
+                row.Item.TargetKind is CleanupTargetKind.FilePermanent or CleanupTargetKind.FileRecycle
+                && IsDirectoryLikeIconSemantic(ResolveCleanupFallbackIconRequest(row).SemanticKind));
 
             var state = new
             {
@@ -5926,7 +5987,10 @@ public sealed class MainForm : Form
                 SnapshotCleanupRows = _snapshot?.CleanupItems.Count ?? 0,
                 SnapshotOverviewRows = _snapshot?.CDriveOverviewEntries.Count ?? 0,
                 SnapshotInfrequentRows = _snapshot?.InfrequentSoftwareEntries.Count ?? 0,
-                SnapshotPhase = _snapshot?.PhaseLabel ?? string.Empty
+                SnapshotPhase = _snapshot?.PhaseLabel ?? string.Empty,
+                CleanupVisibleFileRows = cleanupVisibleFileRows,
+                CleanupFileRowsWithFolderSemantic = cleanupFileRowsWithFolderSemantic,
+                CleanupIconPolicy = "FilePermanent/FileRecycle rows use file/document/package/application semantics; folder semantics are reserved for true directory targets."
             };
 
             File.WriteAllText(_qaStateFilePath, JsonSerializer.Serialize(state, new JsonSerializerOptions
@@ -5962,6 +6026,11 @@ public sealed class MainForm : Form
             textWidth,
             Math.Max(0, button.Width - textWidth),
             Math.Round(button.Width / (double)textWidth, 2));
+    }
+
+    private static bool IsDirectoryLikeIconSemantic(IconSemanticKind semanticKind)
+    {
+        return semanticKind is IconSemanticKind.Directory or IconSemanticKind.Drive or IconSemanticKind.UserData;
     }
 
     private void OnUiThread(Action action)
@@ -6454,7 +6523,7 @@ public sealed class MainForm : Form
             return image;
         }
 
-        return ApplicationIconCache.GetIcon(ResolveCleanupIconRequest(row), GetCurrentIconSize(_grid, _cleanupIconColumn));
+        return ApplicationIconCache.GetIcon(ResolveCleanupFallbackIconRequest(row), GetCurrentIconSize(_grid, _cleanupIconColumn));
     }
 
     private Image GetOverviewIcon(CDriveOverviewEntry entry)
@@ -6465,12 +6534,14 @@ public sealed class MainForm : Form
             return image;
         }
 
-        return ApplicationIconCache.GetIcon(ResolveOverviewIconRequest(entry), GetCurrentIconSize(_overviewGrid, _overviewIconColumn));
+        return ApplicationIconCache.GetIcon(ResolveOverviewFallbackIconRequest(entry), GetCurrentIconSize(_overviewGrid, _overviewIconColumn));
     }
 
     private static string BuildCleanupIconTooltip(CleanupSelectionRow row)
     {
-        return $"{row.Name}\r\n清理候选当前统一使用高清文件夹图标，先保证清晰和稳定。";
+        return row.Item.TargetKind is CleanupTargetKind.FilePermanent or CleanupTargetKind.FileRecycle
+            ? $"{row.Name}\r\n这是文件候选：使用真实文件图标；加载失败时只回退到默认文件图标，不回退成文件夹。"
+            : $"{row.Name}\r\n这是目录候选：只有确认是目录时才显示文件夹/目录图标。";
     }
 
     private static string BuildOverviewIconTooltip(CDriveOverviewEntry entry)
@@ -6483,23 +6554,27 @@ public sealed class MainForm : Form
 
     private string GetCleanupIconKey(CleanupSelectionRow row)
     {
-        var request = ResolveCleanupIconRequest(row);
+        var request = ResolveCleanupFallbackIconRequest(row);
         var primary = string.IsNullOrWhiteSpace(row.Path) ? row.Name : row.Path.Trim();
-        return $"{GetCurrentIconSize(_grid, _cleanupIconColumn)}|{request.BuildCacheKey()}|{primary}";
+        var sourceHint = string.IsNullOrWhiteSpace(row.Item.IconSourcePath) ? "-" : row.Item.IconSourcePath.Trim();
+        var rootHint = string.IsNullOrWhiteSpace(row.Item.IconInstallRoot) ? "-" : row.Item.IconInstallRoot.Trim();
+        return $"{GetCurrentIconSize(_grid, _cleanupIconColumn)}|{request.SemanticKind}|{primary}|{sourceHint}|{rootHint}";
     }
 
     private string GetOverviewIconKey(CDriveOverviewEntry entry)
     {
-        var request = ResolveOverviewIconRequest(entry);
+        var request = ResolveOverviewFallbackIconRequest(entry);
         var primary = string.IsNullOrWhiteSpace(entry.Path) ? entry.Name : entry.Path.Trim();
-        return $"{GetCurrentIconSize(_overviewGrid, _overviewIconColumn)}|{request.BuildCacheKey()}|{primary}";
+        var sourceHint = string.IsNullOrWhiteSpace(entry.IconSourcePath) ? "-" : entry.IconSourcePath.Trim();
+        var rootHint = string.IsNullOrWhiteSpace(entry.IconInstallRoot) ? "-" : entry.IconInstallRoot.Trim();
+        return $"{GetCurrentIconSize(_overviewGrid, _overviewIconColumn)}|{request.SemanticKind}|{primary}|{sourceHint}|{rootHint}";
     }
 
     private static IconLookupRequest ResolveCleanupIconRequest(CleanupSelectionRow row)
     {
-        // 用户当前明确要求清理候选先稳定成“文件夹形式”的高清图标。
-        // 这里不再按临时文件/缓存/包等语义混用小图标，避免公开版继续出现低清和错乱兜底。
-        return new IconLookupRequest(null, null, IconSemanticKind.Directory);
+        var iconSourcePath = ResolveCleanupIconSourcePath(row);
+        var installRoot = ResolveCleanupIconInstallRoot(row);
+        return IconSemanticResolver.ForCleanupRow(row, iconSourcePath, installRoot);
     }
 
     private static IconLookupRequest ResolveOverviewIconRequest(CDriveOverviewEntry entry)
@@ -6507,6 +6582,18 @@ public sealed class MainForm : Form
         var iconSourcePath = ResolveOverviewIconSourcePath(entry);
         var installRoot = ResolveOverviewIconInstallRoot(entry);
         return IconSemanticResolver.ForOverviewEntry(entry, iconSourcePath, installRoot);
+    }
+
+    private static IconLookupRequest ResolveCleanupFallbackIconRequest(CleanupSelectionRow row)
+    {
+        var request = IconSemanticResolver.ForCleanupRow(row, null, null);
+        return new IconLookupRequest(null, null, request.SemanticKind);
+    }
+
+    private static IconLookupRequest ResolveOverviewFallbackIconRequest(CDriveOverviewEntry entry)
+    {
+        var request = IconSemanticResolver.ForOverviewEntry(entry, null, null);
+        return new IconLookupRequest(null, null, request.SemanticKind);
     }
 
     private static string ResolveCleanupIconSourcePath(CleanupSelectionRow row)
@@ -6980,10 +7067,10 @@ public sealed class MainForm : Form
     {
         var minimumWidth = compact
             ? (ultraDense ? 58 : dense ? 66 : 74)
-            : (ultraDense ? 64 : dense ? 68 : 72);
+            : (ultraDense ? 68 : dense ? 72 : 76);
         var horizontalPadding = compact
             ? (ultraDense ? 12 : dense ? 16 : 22)
-            : (ultraDense ? 10 : dense ? 12 : 14);
+            : (ultraDense ? 16 : dense ? 18 : 20);
         var minimumHeight = compact
             ? (ultraDense ? 26 : dense ? 30 : 34)
             : (ultraDense ? 28 : dense ? 32 : 36);

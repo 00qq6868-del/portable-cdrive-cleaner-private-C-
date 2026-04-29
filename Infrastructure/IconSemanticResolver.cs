@@ -39,7 +39,7 @@ public static class IconSemanticResolver
 {
     public static IconLookupRequest DefaultCleanup()
     {
-        return new IconLookupRequest(null, null, IconSemanticKind.Cleanup);
+        return new IconLookupRequest(null, null, IconSemanticKind.Document);
     }
 
     public static IconLookupRequest DefaultOverview()
@@ -84,6 +84,11 @@ public static class IconSemanticResolver
     private static IconSemanticKind ResolveCleanupSemantic(CleanupSelectionRow row)
     {
         var item = row.Item;
+        if (IsFileTarget(item.TargetKind))
+        {
+            return ResolveFileCleanupSemantic(row);
+        }
+
         if (item.IsApplicationRelated || item.CandidateKind == CleanupCandidateKind.AppResidue)
         {
             return IconSemanticKind.Application;
@@ -107,8 +112,34 @@ public static class IconSemanticResolver
         };
     }
 
+    private static IconSemanticKind ResolveFileCleanupSemantic(CleanupSelectionRow row)
+    {
+        var item = row.Item;
+        if (item.IsApplicationRelated || item.CandidateKind == CleanupCandidateKind.AppResidue)
+        {
+            return IconSemanticKind.Application;
+        }
+
+        return item.CandidateKind switch
+        {
+            CleanupCandidateKind.Package => IconSemanticKind.Package,
+            CleanupCandidateKind.DuplicateFile => IconSemanticKind.Duplicate,
+            CleanupCandidateKind.LargeFile => ClassifyLargeFile(row.Path, item.Name, item.TypeDescription),
+            CleanupCandidateKind.PrivacyTrace => IconSemanticKind.Document,
+            CleanupCandidateKind.AppCache or CleanupCandidateKind.BrowserCache or CleanupCandidateKind.ChatCache =>
+                ClassifyFileFromPath(row.Path, item.Name, item.TypeDescription, item.RuleSource),
+            CleanupCandidateKind.SafeJunk => ClassifyFileFromPath(row.Path, item.Name, item.TypeDescription, item.RuleSource),
+            _ => ClassifyFileFromPath(row.Path, item.Name, item.TypeDescription, item.RuleSource)
+        };
+    }
+
     private static IconSemanticKind ResolveOverviewSemantic(CDriveOverviewEntry entry)
     {
+        if (File.Exists(entry.Path))
+        {
+            return ClassifyFileFromPath(entry.Path, entry.Name, entry.PurposeText, entry.Category);
+        }
+
         return entry.Category switch
         {
             "第三方已安装应用" => IconSemanticKind.Application,
@@ -164,6 +195,30 @@ public static class IconSemanticResolver
         return IconSemanticKind.Document;
     }
 
+    private static IconSemanticKind ClassifyFileFromPath(
+        string path,
+        string name,
+        string typeDescription,
+        string ruleSource)
+    {
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        if (PackageExtensions.Contains(extension)
+            || ContainsAny($"{name} {typeDescription} {ruleSource}", "安装包", "压缩", "package", "installer", "setup"))
+        {
+            return IconSemanticKind.Package;
+        }
+
+        if (LogExtensions.Contains(extension)
+            || ContainsAny($"{name} {typeDescription} {ruleSource}", "日志", "log", "dump", "转储", "report"))
+        {
+            return IconSemanticKind.Logs;
+        }
+
+        // Unknown, extensionless, inaccessible, or still-loading file targets must fall back to
+        // the Windows generic document icon, never a folder.
+        return IconSemanticKind.Document;
+    }
+
     private static IconSemanticKind ClassifyFromText(
         string name,
         string category,
@@ -203,6 +258,11 @@ public static class IconSemanticResolver
     private static bool ContainsAny(string source, params string[] tokens)
     {
         return tokens.Any(token => source.Contains(token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsFileTarget(CleanupTargetKind targetKind)
+    {
+        return targetKind is CleanupTargetKind.FilePermanent or CleanupTargetKind.FileRecycle;
     }
 
     private static bool IsTrueUserDataDirectory(string path, string name)
